@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dorm Rankings</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@400;500&display=swap');
+
+    :root {
+      --bg: #6eb5d4;
+      --tab-bar: #5a9fc0;
+      --tab-active: #7ec8e3;
+      --tab-inactive: #4a8aaa;
+      --card-first: #d6e8c8;
+      --card-rest: #a8ccd8;
+      --card-hover: #b8d8e8;
+      --navy: #1a3a5c;
+      --white: #fff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      min-height: 100vh;
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      display: flex;
+      align-items: flex-end;
+      padding: 24px 40px 0;
+      gap: 4px;
+    }
+
+    .tab {
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--navy);
+      padding: 12px 36px 14px;
+      border-radius: 14px 14px 0 0;
+      cursor: pointer;
+      background: var(--tab-inactive);
+      opacity: 0.7;
+      transition: background 0.2s, opacity 0.2s;
+      user-select: none;
+    }
+
+    .tab:hover { opacity: 0.9; }
+
+    .tab.active {
+      background: var(--tab-active);
+      opacity: 1;
+    }
+
+    /* ── Tab underline bar ── */
+    .tab-underline {
+      height: 18px;
+      background: var(--tab-bar);
+      margin: 0 0 32px 0;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ── Content panels ── */
+    .panel { display: none; padding: 0 48px 48px; }
+    .panel.active { display: block; }
+
+    /* ── Rankings list ── */
+    .rankings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 560px;
+    }
+
+    .rank-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .rank-icon {
+      font-size: 2rem;
+      width: 44px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .rank-bar {
+      flex: 1;
+      background: var(--card-rest);
+      border-radius: 12px;
+      padding: 14px 22px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--navy);
+      transition: background 0.2s, transform 0.15s;
+      cursor: default;
+    }
+
+    .rank-bar:hover {
+      background: var(--card-hover);
+      transform: translateX(4px);
+    }
+
+    .rank-row:first-child .rank-bar {
+      background: var(--card-first);
+      font-size: 1.25rem;
+    }
+
+    .rank-number {
+      font-size: 0.85rem;
+      opacity: 0.55;
+      margin-right: 8px;
+    }
+
+    /* ── Graphs placeholder ── */
+    .graphs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 760px;
+    }
+
+    .graph-card {
+      background: var(--card-rest);
+      border-radius: 16px;
+      padding: 24px;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .graph-card h3 {
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .graph-placeholder {
+      flex: 1;
+      background: rgba(255,255,255,0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--navy);
+      opacity: 0.5;
+      font-size: 0.85rem;
+    }
+
+    /* ── Impact placeholder ── */
+    .impact-content {
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .impact-card {
+      background: var(--card-rest);
+      border-radius: 14px;
+      padding: 20px 24px;
+    }
+
+    .impact-card h3 {
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+
+    .impact-card p {
+      color: var(--navy);
+      opacity: 0.7;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* ── Nav arrows ── */
+    .nav-row {
+      display: flex;
+      justify-content: flex-start;
+      padding: 0 48px 24px;
+      gap: 12px;
+    }
+
+    .nav-btn {
+      background: rgba(255,255,255,0.3);
+      border: 2px solid rgba(255,255,255,0.5);
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      font-size: 1.1rem;
+      color: var(--navy);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .nav-btn:hover { background: rgba(255,255,255,0.55); }
+  </style>
+</head>
+<body>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('rankings')">Rankings</div>
+    <div class="tab" onclick="switchTab('graphs')">Graphs</div>
+    <div class="tab" onclick="switchTab('impact')">Impact</div>
+  </div>
+  <div class="tab-underline"></div>
+
+  <!-- Nav -->
+  <div class="nav-row">
+    <button class="nav-btn" onclick="location.href='map.html'">&#8592;</button>
+  </div>
+
+  <!-- Rankings panel -->
+  <div class="panel active" id="panel-rankings">
+    <div class="rankings-list" id="rankings-list">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- Graphs panel -->
+  <div class="panel" id="panel-graphs">
+    <div class="graphs-grid">
+      <div class="graph-card">
+        <h3>Energy Use Over Time</h3>
+        <div class="graph-placeholder">Chart coming soon</div>
+      </div>
+      <div class="graph-card">
+        <h3>Per Capita Usage</h3>
+        <div class="graph-placeholder">Chart coming soon</div>
+      </div>
+      <div class="graph-card">
+        <h3>Weekly Comparison</h3>
+        <div class="graph-placeholder">Chart coming soon</div>
+      </div>
+      <div class="graph-card">
+        <h3>Peak Hours</h3>
+        <div class="graph-placeholder">Chart coming soon</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Impact panel -->
+  <div class="panel" id="panel-impact">
+    <div class="impact-content">
+      <div class="impact-card">
+        <h3>🌱 Carbon Saved</h3>
+        <p>Your dorm's energy reductions have helped offset carbon emissions equivalent to planting trees across campus.</p>
+      </div>
+      <div class="impact-card">
+        <h3>💡 kWh Reduced</h3>
+        <p>Total kilowatt-hours saved across all participating dorms this semester.</p>
+      </div>
+      <div class="impact-card">
+        <h3>🏆 Top Performer</h3>
+        <p>The leading dorm this week has reduced energy use by the most relative to their baseline.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const dorms = [
+      "Bell Tower", "Randolph", "Trinity", "Southgate",
+      "Blackwell", "Gilbert-Addoms", "Pegram", "Alspaugh",
+      "Giles", "West House", "Bassett", "Brown", "Wilson"
+    ];
+
+    const icons = ["👑", "🥈", "🥉"];
+
+    // Build rankings list with placeholder dorm names
+    const list = document.getElementById('rankings-list');
+    dorms.forEach((name, i) => {
+      const row = document.createElement('div');
+      row.className = 'rank-row';
+      row.innerHTML = `
+        <div class="rank-icon">${icons[i] || ""}</div>
+        <div class="rank-bar">
+          <span class="rank-number">${i + 1}.</span>${name}
+        </div>
+      `;
+      list.appendChild(row);
+    });
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('panel-' + tab).classList.add('active');
+    }
+  </script>
+
+</body>
+</html>

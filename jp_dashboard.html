@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duke Residence Hall Utility Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ── Duke Brand Colors (Navy Focus) ───────────────────────────── */
+:root {
+  --navy:    #1A2A6C;
+  --navy-dk: #0F1B3D;
+  --navy-lt: #2A3F8F;
+  --teal:    #4DB6AC;
+  --gold:    #D4A84B;
+  --white:   #F5F7FA;
+  --text:    #1A2A6C;
+  --muted:   #6B7A99;
+  --border:  #DDE3EE;
+  --bg:      #F0F4F8;
+  --card:    #FFFFFF;
+  --teal-lt: #E0F5F3;
+  --navy-lt-bg: #E8EBF7;
+  --green:   #10B981;
+  --red:     #EF4444;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Top Nav ────────────────────────────────────────────────────── */
+.topnav {
+  background: var(--navy);
+  color: white;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 2000;
+  box-shadow: 0 2px 12px rgba(26,42,108,0.3);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: white;
+}
+
+.nav-duke {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: white;
+}
+
+.nav-sep {
+  width: 1px;
+  height: 26px;
+  background: rgba(255,255,255,0.25);
+}
+
+.nav-title {
+  font-size: 0.88rem;
+  color: var(--teal);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.nav-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.55);
+}
+
+.nav-breadcrumb a {
+  color: rgba(255,255,255,0.55);
+  text-decoration: none;
+}
+
+.nav-breadcrumb a:hover { color: var(--teal); }
+.nav-breadcrumb span.cur { color: var(--teal); }
+
+/* ── Full Screen Layout ─────────────────────────────────────────── */
+.app-container {
+  height: calc(100vh - 52px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── MAP VIEW (Initial Screen) ─────────────────────────────────── */
+.map-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: var(--bg);
+}
+
+.map-screen.hidden { display: none; }
+
+.map-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.map-subtitle {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.map-container {
+  position: relative;
+  max-width: 900px;
+  width: 100%;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+
+.map-container img {
+  width: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  border-radius: 8px;
+}
+
+/* Building hotspots */
+.building-hotspot {
+  position: absolute;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(26,42,108,0.08);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.building-hotspot:hover {
+  background: rgba(26,42,108,0.2);
+  border-color: var(--navy);
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(26,42,108,0.3);
+}
+
+/* ── DETAIL VIEW (After Selection) ──────────────────────────────── */
+.detail-screen {
+  flex: 1;
+  display: none;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+.detail-screen.active { display: grid; }
+
+/* Building header */
+.building-header {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-lt) 100%);
+  padding: 20px 32px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bh-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.bh-back {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: 'Roboto', sans-serif;
+  transition: all 0.2s;
+}
+
+.bh-back:hover { background: rgba(255,255,255,0.25); }
+
+.bh-info {}
+
+.bh-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.bh-meta {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.75);
+}
+
+.bh-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.bh-stat {
+  text-align: center;
+}
+
+.bh-stat .val {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: 'Roboto', monospace;
+}
+
+.bh-stat .lbl {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* Detail tabs + content */
+.detail-body {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+.detail-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  background: white;
+  padding: 0 32px;
+}
+
+.dtab {
+  padding: 14px 24px;
+  border: none;
+  background: transparent;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.dtab.active {
+  color: var(--navy);
+  border-bottom-color: var(--teal);
+}
+
+.dtab:hover:not(.active) { color: var(--navy); }
+
+.tab-panels {
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.tab-panel {
+  display: none;
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.tab-panel.active { display: block; }
+
+/* ── METERING TAB ────────────────────────────────────────────────── */
+.controls-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.control-select {
+  flex: 1;
+  min-width: 150px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: white;
+  outline: none;
+}
+
+.control-select:focus { border-color: var(--navy); }
+
+.view-btns { display: flex; gap: 6px; }
+
+.vbtn {
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: white;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  transition: all 0.15s;
+}
+
+.vbtn.active { background: var(--navy); color: white; border-color: var(--navy); }
+.vbtn:hover:not(.active) { border-color: var(--navy); color: var(--navy); }
+
+.chart-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.chart-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 16px;
+}
+
+/* ── IMPACT TAB ──────────────────────────────────────────────────── */
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--navy);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--teal);
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.action-card {
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.action-card:hover, .action-card.selected {
+  border-color: var(--navy);
+  background: var(--navy-lt-bg);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26,42,108,0.15);
+}
+
+.action-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.action-emoji {
+  font-size: 1.5rem;
+}
+
+.action-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.action-desc {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.action-impact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.impact-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.impact-badge.high { background: #FEE2E2; color: #991B1B; }
+.impact-badge.medium { background: #FEF3C7; color: #92400E; }
+.impact-badge.highest { background: #DCFCE7; color: #166534; }
+
+.action-savings {
+  font-weight: 700;
+  color: var(--green);
+}
+
+/* Sliders */
+.slider-section {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.slider-row {
+  margin-bottom: 24px;
+}
+
+.slider-row:last-child { margin-bottom: 0; }
+
+.slider-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.slider-label {
+  font-size: 0.85rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.slider-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--teal-lt);
+  padding: 3px 12px;
+  border-radius: 12px;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--navy);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(26,42,108,0.3);
+  transition: transform 0.1s;
+}
+
+input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+
+.slider-marks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* Impact results */
+.impact-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.result-card {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-lt) 100%);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  color: white;
+}
+
+.result-val {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.result-lbl {
+  font-size: 0.75rem;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── BUDGET/SAVINGS TAB ──────────────────────────────────────────── */
+.budget-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.budget-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.budget-card-title {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.budget-card-val {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--navy);
+  font-family: 'Roboto', monospace;
+}
+
+.budget-card-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Scrollbar */
+.tab-panels::-webkit-scrollbar { width: 6px; }
+.tab-panels::-webkit-scrollbar-track { background: transparent; }
+.tab-panels::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="topnav">
+  <a class="nav-logo" href="https://students.duke.edu/office-of-sustainability/" target="_blank">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      <rect width="22" height="22" rx="4" fill="#4DB6AC"/>
+      <text x="4" y="16" font-size="13" font-weight="900" fill="white" font-family="Georgia">D</text>
+    </svg>
+    <span class="nav-duke">Duke Student Affairs</span>
+  </a>
+  <div class="nav-sep"></div>
+  <span class="nav-title">Residence Hall Utility Dashboard</span>
+  <div class="nav-breadcrumb">
+    <a href="https://students.duke.edu/office-of-sustainability/" target="_blank">Sustainability</a>
+    <span>›</span>
+    <span class="cur">Utility Dashboard</span>
+  </div>
+</nav>
+
+<div class="app-container">
+
+  <!-- MAP SCREEN (Initial) -->
+  <div class="map-screen" id="mapScreen">
+    <h1 class="map-title">Duke Residence Hall Energy Dashboard</h1>
+    <p class="map-subtitle">Select a building to view detailed energy data and impact analysis</p>
+    
+    <div class="map-container" id="mapContainer">
+      <img id="map-img" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iOTAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2YwZjRmOCIvPgogIDwhLS0gU2ltcGxpZmllZCBpbGx1c3RyYXRpb24gb2YgRHVrZSBDYW1wdXMgLS0+CiAgPCEtLSBCZWxsIFRvd2VyIC0tPgogIDxyZWN0IHg9IjcwIiB5PSI1MCIgd2lkdGg9IjE2MCIgaGVpZ2h0PSIxMzAiIGZpbGw9IiNEREUzRUUiIHJ4PSI4Ii8+CiAgPHRleHQgeD0iMTUwIiB5PSIxMTUiIGZvbnQtZmFtaWx5PSJSb2JvdG8iIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiMxQTJBNkMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkJlbGwgVG93ZXI8L3RleHQ+CiAgPCEtLSBSYW5kb2xwaCAtLT4KICA8cmVjdCB4PSIyMzAiIHk9IjkwIiB3aWR0aD0iMTI1IiBoZWlnaHQ9IjkwIiBmaWxsPSIjRERFM0VFIiByeD0iOCIvPgogIDx0ZXh0IHg9IjI5MyIgeT0iMTQwIiBmb250LWZhbWlseT0iUm9ib3RvIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMUEyQTZDIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5SYW5kb2xwaDwvdGV4dD4KICA8IS0tIFNvdXRoZ2F0ZSAtLT4KICA8cmVjdCB4PSI0MCIgeT0iMjQwIiB3aWR0aD0iMTA1IiBoZWlnaHQ9Ijg1IiBmaWxsPSIjRERFM0VFIiByeD0iOCIvPgogIDx0ZXh0IHg9IjkyIiB5PSIyODgiIGZvbnQtZmFtaWx5PSJSb2JvdG8iIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiMxQTJBNkMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlNvdXRoZ2F0ZTwvdGV4dD4KICA8IS0tIEJsYWNrd2VsbCAtLT4KICA8cmVjdCB4PSIyNzAiIHk9IjIxNSIgd2lkdGg9IjE2MCIgaGVpZ2h0PSI5NSIgZmlsbD0iI0RERTNFRSIgcng9IjgiLz4KICA8dGV4dCB4PSIzNTAiIHk9IjI2OCIgZm9udC1mYW1pbHk9IlJvYm90byIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzFBMkE2QyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QmxhY2t3ZWxsPC90ZXh0PgogIDwhLS0gR2lsYmVydC1BZGRvbXMgLS0+CiAgPHJlY3QgeD0iMjA1IiB5PSIzODAiIHdpZHRoPSIxNDUiIGhlaWdodD0iOTUiIGZpbGw9IiNEREUzRUUiIHJ4PSI4Ii8+CiAgPHRleHQgeD0iMjc4IiB5PSI0MjgiIGZvbnQtZmFtaWx5PSJSb2JvdG8iIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiMxQTJBNkMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkdpbGJlcnQtQWRkb21zPC90ZXh0PgogIDwhLS0gUGVncmFtIC0tPgogIDxyZWN0IHg9IjQ5NSIgeT0iODAiIHdpZHRoPSIxMDUiIGhlaWdodD0iOTUiIGZpbGw9IiNEREUzRUUiIHJ4PSI4Ii8+CiAgPHRleHQgeD0iNTQ4IiB5PSIxMzIiIGZvbnQtZmFtaWx5PSJSb2JvdG8iIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiMxQTJBNkMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlBlZ3JhbTwvdGV4dD4KICA8IS0tIEFsc3BhdWdoIC0tPgogIDxyZWN0IHg9IjUwNSIgeT0iMTg1IiB3aWR0aD0iMTE1IiBoZWlnaHQ9Ijg1IiBmaWxsPSIjRERFM0VFIiByeD0iOCIvPgogIDx0ZXh0IHg9IjU2MiIgeT0iMjMyIiBmb250LWZhbWlseT0iUm9ib3RvIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMUEyQTZDIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5BbHNwYXVnaDwvdGV4dD4KICA8IS0tIEdpbGVzIC0tPgogIDxyZWN0IHg9IjUxNSIgeT0iMjkwIiB3aWR0aD0iMTI1IiBoZWlnaHQ9Ijc4IiBmaWxsPSIjRERFM0VFIiByeD0iOCIvPgogIDx0ZXh0IHg9IjU3OCIgeT0iMzM0IiBmb250LWZhbWlseT0iUm9ib3RvIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMUEyQTZDIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5HaWxlczwvdGV4dD4KICA8IS0tIFdlc3QgSG91c2UgLS0+CiAgPHJlY3QgeD0iNTY1IiB5PSI0MjAiIHdpZHRoPSIxMDUiIGhlaWdodD0iOTAiIGZpbGw9IiNEREUzRUUiIHJ4PSI4Ii8+CiAgPHRleHQgeD0iNjE4IiB5PSI0NyIgZm9udC1mYW1pbHk9IlJvYm90byIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzFBMkE2QyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+V2VzdCBIb3VzZTwvdGV4dD4KICA8IS0tIEJhc3NldHQgLS0+CiAgPHJlY3QgeD0iNjY1IiB5PSI1NSIgd2lkdGg9IjE2MCIgaGVpZ2h0PSI3OCIgZmlsbD0iI0RERTNFRSIgcng9IjgiLz4KICA8dGV4dCB4PSI3NDUiIHk9Ijk5IiBmb250LWZhbWlseT0iUm9ib3RvIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMUEyQTZDIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5CYXNzZXR0PC90ZXh0PgogIDwhLS0gQnJvd24gLS0+CiAgPHJlY3QgeD0iNjY1IiB5PSIxODAiIHdpZHRoPSIxNjAiIGhlaWdodD0iODUiIGZpbGw9IiNEREUzRUUiIHJ4PSI4Ii8+CiAgPHRleHQgeD0iNzQ1IiB5PSIyMjciIGZvbnQtZmFtaWx5PSJSb2JvdG8iIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiMxQTJBNkMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkJyb3duPC90ZXh0PgogIDwhLS0gV2lsc29uIC0tPgogIDxyZWN0IHg9IjY2NSIgeT0iMjk1IiB3aWR0aD0iMTQ1IiBoZWlnaHQ9Ijg1IiBmaWxsPSIjRERFM0VFIiByeD0iOCIvPgogIDx0ZXh0IHg9IjczOCIgeT0iMzQyIiBmb250LWZhbWlseT0iUm9ib3RvIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMUEyQTZDIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5XaWxzb248L3RleHQ+Cjwvc3ZnPg==" alt="Duke Campus Map" />
+      <!-- Hotspots will be injected by JS -->
+    </div>
+  </div>
+
+  <!-- DETAIL SCREEN (After Selection) -->
+  <div class="detail-screen" id="detailScreen">
+    
+    <!-- Building Header -->
+    <div class="building-header">
+      <div class="bh-left">
+        <button class="bh-back" onclick="goBackToMap()">← Back to Map</button>
+        <div class="bh-info">
+          <div class="bh-name" id="bhName">—</div>
+          <div class="bh-meta" id="bhMeta">—</div>
+        </div>
+      </div>
+      <div class="bh-stats">
+        <div class="bh-stat">
+          <div class="val" id="bhRank">—</div>
+          <div class="lbl">Rank</div>
+        </div>
+        <div class="bh-stat">
+          <div class="val" id="bhKwh">—</div>
+          <div class="lbl">kWh/month</div>
+        </div>
+        <div class="bh-stat">
+          <div class="val" id="bhChange">—</div>
+          <div class="lbl">vs Last Month</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs + Content -->
+    <div class="detail-body">
+      <div class="detail-tabs">
+        <button class="dtab active" onclick="switchTab('metering',this)">📊 Metering Data</button>
+        <button class="dtab" onclick="switchTab('impact',this)">🌱 Impact Analysis</button>
+        <button class="dtab" onclick="switchTab('budget',this)">💰 Budget & Savings</button>
+      </div>
+
+      <div class="tab-panels">
+        
+        <!-- METERING TAB -->
+        <div class="tab-panel active" id="tab-metering">
+          <div class="controls-row">
+            <select class="control-select" id="dateSelect" onchange="renderMeterChart()"></select>
+            <div class="view-btns">
+              <button class="vbtn active" onclick="setMeterView('15min',this)">15 min</button>
+              <button class="vbtn" onclick="setMeterView('hourly',this)">Hourly</button>
+              <button class="vbtn" onclick="setMeterView('daily',this)">Daily</button>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">⚡ Electricity Consumption — Real-Time Data</div>
+            <div id="meterChart" style="height:320px;"></div>
+          </div>
+
+          <div style="font-size:0.8rem; color:var(--muted); line-height:1.6;" id="meterNote"></div>
+        </div>
+
+        <!-- IMPACT TAB -->
+        <div class="tab-panel" id="tab-impact">
+          
+          <div class="section-title">Choose Energy-Saving Behavior</div>
+          <div class="action-grid" id="actionGrid"></div>
+
+          <div class="section-title">Adjust Participation Parameters</div>
+          <div class="slider-section">
+            <div class="slider-row">
+              <div class="slider-top">
+                <span class="slider-label" id="primaryLabel">Duration (hours/day)</span>
+                <span class="slider-value" id="primaryValue">10 hrs</span>
+              </div>
+              <input type="range" id="primarySlider" min="1" max="24" value="10" oninput="updateImpact()">
+              <div class="slider-marks">
+                <span>1 hr</span><span>6 hrs</span><span>12 hrs</span><span>18 hrs</span><span>24 hrs</span>
+              </div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-top">
+                <span class="slider-label">Participation Rate (%)</span>
+                <span class="slider-value" id="participationValue">50%</span>
+              </div>
+              <input type="range" id="participationSlider" min="5" max="100" value="50" step="5" oninput="updateImpact()">
+              <div class="slider-marks">
+                <span>5%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Projected Monthly Impact</div>
+          <div class="impact-results">
+            <div class="result-card">
+              <div class="result-val" id="impactKwh">—</div>
+              <div class="result-lbl">kWh Saved</div>
+            </div>
+            <div class="result-card">
+              <div class="result-val" id="impactCo2">—</div>
+              <div class="result-lbl">kg CO₂ Avoided</div>
+            </div>
+            <div class="result-card">
+              <div class="result-val" id="impactCost">—</div>
+              <div class="result-lbl">$ Cost Saved</div>
+            </div>
+            <div class="result-card">
+              <div class="result-val" id="impactRank">—</div>
+              <div class="result-lbl">Rank Change</div>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">📈 Impact Scaling Curve</div>
+            <div id="impactChart" style="height:280px;"></div>
+          </div>
+        </div>
+
+        <!-- BUDGET TAB -->
+        <div class="tab-panel" id="tab-budget">
+          
+          <div class="section-title">Monthly Budget Overview</div>
+          <div class="budget-summary">
+            <div class="budget-card">
+              <div class="budget-card-title">Current Monthly Cost</div>
+              <div class="budget-card-val" id="budgetCurrent">$—</div>
+              <div class="budget-card-sub">Based on current consumption</div>
+            </div>
+            <div class="budget-card">
+              <div class="budget-card-title">Potential Savings</div>
+              <div class="budget-card-val" id="budgetSavings" style="color:var(--green)">$—</div>
+              <div class="budget-card-sub">If all behaviors adopted</div>
+            </div>
+            <div class="budget-card">
+              <div class="budget-card-title">New Monthly Cost</div>
+              <div class="budget-card-val" id="budgetNew">$—</div>
+              <div class="budget-card-sub">After energy savings</div>
+            </div>
+            <div class="budget-card">
+              <div class="budget-card-title">Annual Savings</div>
+              <div class="budget-card-val" id="budgetAnnual" style="color:var(--green)">$—</div>
+              <div class="budget-card-sub">Projected 12-month total</div>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">💵 Budget Breakdown — Current vs. Potential</div>
+            <div id="budgetChart" style="height:300px;"></div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">📊 Monthly Trend Analysis</div>
+            <div id="trendChart" style="height:280px;"></div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────
+let BUILDINGS = [];
+let REAL_DATA = [];
+let AVG_PROFILE = {};
+let SORTED_TIMES = [];
+let RESEARCH_ACTIONS = [];
+let selectedBuilding = null;
+let selectedActionIdx = 0;
+let meterView = '15min';
+
+// Building hotspot positions (from illustrated map)
+const HOTSPOT_POSITIONS = {
+  "Bell Tower Hall":    { l: 8,  t: 9,  w: 18, h: 21 },
+  "Randolph Hall":      { l: 26, t: 15, w: 14, h: 15 },
+  "Southgate Hall":     { l: 4,  t: 40, w: 12, h: 14 },
+  "Blackwell Hall":     { l: 30, t: 36, w: 18, h: 16 },
+  "Gilbert-Addoms":     { l: 23, t: 63, w: 16, h: 16 },
+  "Pegram Hall":        { l: 55, t: 13, w: 12, h: 16 },
+  "Alspaugh Hall":      { l: 56, t: 31, w: 13, h: 14 },
+  "Giles Hall":         { l: 57, t: 48, w: 14, h: 13 },
+  "West Hall":          { l: 63, t: 70, w: 12, h: 15 },
+  "Bassett Hall":       { l: 74, t: 9,  w: 18, h: 13 },
+  "Brown Hall":         { l: 74, t: 30, w: 18, h: 14 },
+  "Wilson Hall":        { l: 74, t: 49, w: 16, h: 14 },
+};
+
+// ── BOOT ─────────────────────────────────────────────────────────────
+async function boot() {
+  try {
+    const res = await fetch('/mnt/user-data/outputs/metering_dashboard_data.json');
+    const d = await res.json();
+    BUILDINGS = d.buildings;
+    REAL_DATA = d.crowell_real;
+    AVG_PROFILE = d.avg_profile;
+    SORTED_TIMES = d.sorted_times;
+    RESEARCH_ACTIONS = d.research_actions;
+  } catch(e) {
+    console.error(e);
+    buildFallback();
+  }
+  initMapHotspots();
+  populateDates();
+  renderActionGrid();
+}
+
+function buildFallback() {
+  // Minimal fallback data
+  SORTED_TIMES = [];
+  for(let h=0;h<24;h++) for(let m=0;m<60;m+=15)
+    SORTED_TIMES.push(String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'));
+  AVG_PROFILE = {};
+  SORTED_TIMES.forEach(t => AVG_PROFILE[t] = 28 + 14*Math.sin((parseInt(t)-6)*Math.PI/12));
+  
+  const names = Object.keys(HOTSPOT_POSITIONS);
+  const caps = names.map(()=>Math.floor(Math.random()*100)+80);
+  const base = Object.values(AVG_PROFILE).reduce((a,b)=>a+b,0);
+  
+  let arr = names.map((n,i)=>({
+    name:n, capacity:caps[i],
+    scale:(caps[i]/180)*(0.75+Math.random()*0.55),
+    monthly:{'2025-12':base*1.1, '2026-01':base*1.05},
+    month_prev:'2025-12', month_curr:'2026-01',
+    kwh_prev:base*1.1, kwh_curr:base*1.05,
+    pct_change:((base*1.05-base*1.1)/(base*1.1))*100,
+  }));
+  
+  arr.sort((a,b)=>a.pct_change-b.pct_change);
+  arr.forEach((b,i)=>b.improvement_rank=i+1);
+  BUILDINGS = arr;
+  REAL_DATA = [];
+  
+  RESEARCH_ACTIONS = [
+    { id:1, short_name:'🌡️ Thermostat +2°F', description:'Adjust thermostat', kwh_per_student_day:1.3, hours_range:[1,24], default_hours:10, impact_level:'HIGH' },
+    { id:2, short_name:'🔌 Unplug Devices', description:'Unplug when away', kwh_per_student_day:0.6, hours_range:[1,24], default_hours:8, impact_level:'MEDIUM' },
+    { id:3, short_name:'💡 Turn Off Lights', description:'Turn off lights', kwh_per_student_day:0.12, hours_range:[1,12], default_hours:6, impact_level:'MEDIUM' },
+    { id:4, short_name:'💻 Computer Sleep', description:'Enable sleep mode', kwh_per_student_day:1.1, hours_range:[1,24], default_hours:12, impact_level:'MEDIUM' },
+    { id:5, short_name:'⚡ All Behaviors', description:'All combined', kwh_per_student_day:3.12, hours_range:[1,24], default_hours:10, impact_level:'HIGHEST' },
+  ];
+}
+
+// ── MAP HOTSPOTS ─────────────────────────────────────────────────────
+function initMapHotspots() {
+  const container = document.getElementById('mapContainer');
+  
+  Object.entries(HOTSPOT_POSITIONS).forEach(([name, pos]) => {
+    const building = BUILDINGS.find(b => b.name === name);
+    if (!building) return;
+    
+    const hotspot = document.createElement('div');
+    hotspot.className = 'building-hotspot';
+    hotspot.style.left = pos.l + '%';
+    hotspot.style.top = pos.t + '%';
+    hotspot.style.width = pos.w + '%';
+    hotspot.style.height = pos.h + '%';
+    hotspot.title = name;
+    
+    hotspot.addEventListener('click', () => selectBuilding(building));
+    container.appendChild(hotspot);
+  });
+}
+
+// ── BUILDING SELECTION ───────────────────────────────────────────────
+function selectBuilding(building) {
+  selectedBuilding = building;
+  
+  // Hide map, show detail
+  document.getElementById('mapScreen').classList.add('hidden');
+  document.getElementById('detailScreen').classList.add('active');
+  
+  // Update header
+  document.getElementById('bhName').textContent = building.name;
+  document.getElementById('bhMeta').textContent = `${building.capacity} students · ${building.is_real ? 'Real Data ★' : 'Simulated'}`;
+  document.getElementById('bhRank').textContent = `#${building.improvement_rank || '—'}`;
+  document.getElementById('bhKwh').textContent = (building.kwh_curr || 0).toFixed(0);
+  
+  const pct = building.pct_change || 0;
+  const el = document.getElementById('bhChange');
+  el.textContent = (pct > 0 ? '+' : '') + pct.toFixed(1) + '%';
+  el.style.color = pct <= 0 ? 'var(--green)' : 'var(--red)';
+  
+  // Update note
+  document.getElementById('meterNote').innerHTML = building.is_real
+    ? `<strong>★ Real Data:</strong> ${building.name} — 15-minute interval metering from Duke's system (Jan-Feb 2026).`
+    : `<strong>Simulated:</strong> ${building.name} data is modeled by scaling real demand profiles.`;
+  
+  renderMeterChart();
+  updateImpact();
+  updateBudget();
+}
+
+function goBackToMap() {
+  document.getElementById('detailScreen').classList.remove('active');
+  document.getElementById('mapScreen').classList.remove('hidden');
+}
+
+// ── TAB SWITCHING ────────────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.dtab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  
+  if (tab === 'metering') renderMeterChart();
+  if (tab === 'impact') updateImpact();
+  if (tab === 'budget') updateBudget();
+}
+
+// ── METERING TAB ─────────────────────────────────────────────────────
+function populateDates() {
+  const dates = [...new Set(REAL_DATA.map(r=>r.date))].sort();
+  const sel = document.getElementById('dateSelect');
+  dates.forEach(d => {
+    const lbl = new Date(d+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    sel.appendChild(new Option(lbl, d));
+  });
+  if (dates.length) sel.value = dates[dates.length-1];
+}
+
+function setMeterView(v, btn) {
+  meterView = v;
+  document.querySelectorAll('.vbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMeterChart();
+}
+
+function getBuildingData(code, date) {
+  // Use real Crowell data if available
+  if (code === '7712' && REAL_DATA.length > 0) {
+    return REAL_DATA.filter(r => r.date === date);
+  }
+  // Simulate for other buildings
+  const b = BUILDINGS.find(x=>x.code===code);
+  const scale = b ? b.scale : 1;
+  return SORTED_TIMES.map(t => ({
+    ts: date+' '+t, date, time:t, hour:parseInt(t),
+    kbtu: (AVG_PROFILE[t]||28)*scale*3.412,
+    kwh:  (AVG_PROFILE[t]||28)*scale,
+  }));
+}
+
+function renderMeterChart() {
+  if (!selectedBuilding) return;
+  const date = document.getElementById('dateSelect').value;
+  if (!date) return;
+  const raw = getBuildingData(selectedBuilding.code, date);
+  let x, y, xTitle, yTitle;
+  
+  if (meterView === '15min') {
+    x = raw.map(r=>r.ts);
+    y = raw.map(r=>r.kbtu);
+    yTitle='Demand (kBTU/hr)'; xTitle='Time';
+  } else if (meterView === 'hourly') {
+    const hr={};
+    raw.forEach(r=>{hr[r.hour]=(hr[r.hour]||0)+r.kwh;});
+    x=Object.keys(hr).map(h=>date+' '+String(h).padStart(2,'0')+':00');
+    y=Object.values(hr);
+    yTitle='kWh/hr'; xTitle='Hour';
+  } else {
+    const all = (selectedBuilding.code==='7712'&&REAL_DATA.length) ? REAL_DATA : raw;
+    const dy={};
+    all.forEach(r=>{dy[r.date]=(dy[r.date]||0)+r.kwh;});
+    x=Object.keys(dy).sort(); y=x.map(d=>dy[d]);
+    yTitle='kWh/day'; xTitle='Date';
+  }
+  
+  const avg = y.reduce((a,c)=>a+c,0)/y.length;
+  
+  Plotly.newPlot('meterChart', [
+    { x, y, mode:'lines', type:'scatter',
+      line:{color:'#1A2A6C',width:2.5},
+      fill:'tozeroy', fillcolor:'rgba(26,42,108,0.08)',
+      name:selectedBuilding.name,
+      hovertemplate:'<b>%{x}</b><br>%{y:.1f}<extra></extra>'
+    },
+    { x, y:y.map(()=>avg), mode:'lines', type:'scatter',
+      line:{color:'#D4A84B',width:1.5,dash:'dash'},
+      name:'Avg', hoverinfo:'skip'
+    }
+  ], {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{color:'#6B7A99',family:'Roboto',size:10},
+    margin:{t:8,b:40,l:50,r:10},
+    xaxis:{title:xTitle,gridcolor:'rgba(0,0,0,0.04)',color:'#6B7A99',tickfont:{size:9}},
+    yaxis:{title:yTitle,gridcolor:'rgba(0,0,0,0.05)',color:'#6B7A99'},
+    showlegend:true,
+    legend:{orientation:'h',x:0,y:1.12,font:{size:9}},
+    hovermode:'x unified',
+  },{responsive:true,displayModeBar:false});
+}
+
+// ── IMPACT TAB ───────────────────────────────────────────────────────
+function renderActionGrid() {
+  const grid = document.getElementById('actionGrid');
+  grid.innerHTML = RESEARCH_ACTIONS.map((a,i) => {
+    const [emoji, ...rest] = a.short_name.split(' ');
+    const name = rest.join(' ');
+    return `
+      <div class="action-card ${i===0?'selected':''}" onclick="selectAction(this,${i})">
+        <div class="action-header">
+          <span class="action-emoji">${emoji}</span>
+          <span class="action-name">${name}</span>
+        </div>
+        <div class="action-desc">${a.description}</div>
+        <div class="action-impact">
+          <span class="impact-badge ${a.impact_level.toLowerCase()}">${a.impact_level}</span>
+          <span class="action-savings">${a.kwh_per_student_day} kWh/student/day</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function selectAction(el, idx) {
+  document.querySelectorAll('.action-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedActionIdx = idx;
+  
+  const action = RESEARCH_ACTIONS[idx];
+  const slider = document.getElementById('primarySlider');
+  slider.min = action.hours_range[0];
+  slider.max = action.hours_range[1];
+  slider.value = action.default_hours;
+  
+  updateImpact();
+}
+
+function updateImpact() {
+  if (!selectedBuilding) return;
+  
+  const action = RESEARCH_ACTIONS[selectedActionIdx];
+  const hours = parseInt(document.getElementById('primarySlider').value);
+  const participation = parseInt(document.getElementById('participationSlider').value);
+  
+  document.getElementById('primaryValue').textContent = `${hours} hrs`;
+  document.getElementById('participationValue').textContent = `${participation}%`;
+  
+  // Research-based calculation
+  const kwhPerStudentDay = action.kwh_per_student_day * (hours / action.default_hours);
+  const studentsParticipating = Math.round(selectedBuilding.capacity * (participation / 100));
+  const buildingDailySavings = kwhPerStudentDay * studentsParticipating;
+  const monthlySavings = buildingDailySavings * 30;
+  
+  const co2 = monthlySavings * 0.386; // kg CO₂
+  const cost = monthlySavings * 0.12; // $0.12/kWh
+  
+  // Rank improvement
+  const newMonthlyKwh = Math.max(0, (selectedBuilding.kwh_curr||0) - monthlySavings);
+  const newPct = selectedBuilding.kwh_prev > 0 
+    ? ((newMonthlyKwh - selectedBuilding.kwh_prev) / selectedBuilding.kwh_prev) * 100 
+    : 0;
+  const newRank = BUILDINGS.filter(x => x.pct_change < newPct).length + 1;
+  const rankImprovement = selectedBuilding.improvement_rank - newRank;
+  
+  document.getElementById('impactKwh').textContent = monthlySavings.toFixed(0);
+  document.getElementById('impactCo2').textContent = co2.toFixed(1);
+  document.getElementById('impactCost').textContent = '$' + cost.toFixed(0);
+  document.getElementById('impactRank').textContent = rankImprovement > 0 
+    ? `▲ +${rankImprovement}` 
+    : rankImprovement < 0 ? `▼ ${rankImprovement}` : 'No change';
+  
+  renderImpactCurve(action, hours, studentsParticipating);
+}
+
+function renderImpactCurve(action, currentHours, students) {
+  const hoursPts = Array.from({length:action.hours_range[1]-action.hours_range[0]+1},(_,i)=>i+action.hours_range[0]);
+  const y = hoursPts.map(h => {
+    const kwh = action.kwh_per_student_day * (h / action.default_hours) * students * 30;
+    return kwh;
+  });
+  
+  Plotly.newPlot('impactChart', [
+    { x:hoursPts, y, mode:'lines+markers', type:'scatter',
+      line:{color:'#1A2A6C',width:2.5},
+      marker:{color:hoursPts.map(h=>h===currentHours?'#4DB6AC':'#1A2A6C'),size:hoursPts.map(h=>h===currentHours?10:5)},
+      fill:'tozeroy', fillcolor:'rgba(26,42,108,0.08)',
+      hovertemplate:'<b>%{x} hrs</b><br>%{y:.0f} kWh/month<extra></extra>',
+    }
+  ], {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{color:'#6B7A99',family:'Roboto',size:10},
+    margin:{t:8,b:40,l:50,r:10},
+    xaxis:{title:'Hours per day',gridcolor:'rgba(0,0,0,0.04)',color:'#6B7A99'},
+    yaxis:{title:'Monthly kWh saved',gridcolor:'rgba(0,0,0,0.05)',color:'#6B7A99'},
+    showlegend:false,
+  },{responsive:true,displayModeBar:false});
+}
+
+// ── BUDGET TAB ───────────────────────────────────────────────────────
+function updateBudget() {
+  if (!selectedBuilding) return;
+  
+  const monthlyKwh = selectedBuilding.kwh_curr || 0;
+  const currentCost = monthlyKwh * 0.12;
+  
+  // Max potential savings (all behaviors, 100% participation)
+  const maxKwhSavings = 3.12 * selectedBuilding.capacity * 30; // All behaviors combined
+  const maxCostSavings = maxKwhSavings * 0.12;
+  const newCost = currentCost - maxCostSavings;
+  const annualSavings = maxCostSavings * 12;
+  
+  document.getElementById('budgetCurrent').textContent = '$' + currentCost.toFixed(0);
+  document.getElementById('budgetSavings').textContent = '$' + maxCostSavings.toFixed(0);
+  document.getElementById('budgetNew').textContent = '$' + newCost.toFixed(0);
+  document.getElementById('budgetAnnual').textContent = '$' + annualSavings.toFixed(0);
+  
+  // Budget breakdown chart
+  Plotly.newPlot('budgetChart', [
+    {
+      x: ['Current', 'Potential'],
+      y: [currentCost, newCost],
+      type: 'bar',
+      marker: { color: ['#1A2A6C', '#10B981'] },
+      text: ['$'+currentCost.toFixed(0), '$'+newCost.toFixed(0)],
+      textposition: 'outside',
+      hovertemplate: '<b>%{x}</b><br>$%{y:.0f}<extra></extra>',
+    }
+  ], {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{color:'#6B7A99',family:'Roboto',size:10},
+    margin:{t:8,b:40,l:50,r:10},
+    xaxis:{gridcolor:'rgba(0,0,0,0.04)',color:'#6B7A99'},
+    yaxis:{title:'Monthly Cost ($)',gridcolor:'rgba(0,0,0,0.05)',color:'#6B7A99'},
+    showlegend:false,
+  },{responsive:true,displayModeBar:false});
+  
+  // Monthly trend (simulated)
+  const months = ['Jan','Feb','Mar','Apr','May','Jun'];
+  const current = months.map(()=>currentCost + Math.random()*200-100);
+  const potential = months.map(()=>newCost + Math.random()*150-75);
+  
+  Plotly.newPlot('trendChart', [
+    { x:months, y:current, mode:'lines+markers', name:'Current', line:{color:'#1A2A6C',width:2.5} },
+    { x:months, y:potential, mode:'lines+markers', name:'With Savings', line:{color:'#10B981',width:2.5,dash:'dash'} },
+  ], {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{color:'#6B7A99',family:'Roboto',size:10},
+    margin:{t:8,b:40,l:50,r:10},
+    xaxis:{gridcolor:'rgba(0,0,0,0.04)',color:'#6B7A99'},
+    yaxis:{title:'Cost ($)',gridcolor:'rgba(0,0,0,0.05)',color:'#6B7A99'},
+    showlegend:true,
+    legend:{orientation:'h',x:0,y:1.12,font:{size:9}},
+  },{responsive:true,displayModeBar:false});
+}
+
+boot();
+</script>
+</body>
+</html>

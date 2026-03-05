@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dorm Rankings</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,700;0,800;1,700&family=DM+Sans:wght@400;500&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #6eb5d4;
+      --tab-bar:      #5a9fc0;
+      --tab-active:   #7ec8e3;
+      --tab-inactive: #4a8aaa;
+      --card-first:   #d6e8c8;
+      --card-rest:    #a8ccd8;
+      --card-hover:   #b8d8e8;
+      --card-selected:#ffd580;
+      --navy:         #1a3a5c;
+      --green:        #2e9e6b;
+      --red:          #d94f4f;
+      --white:        #fff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      min-height: 100vh;
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ── Top nav strip ── */
+    .topnav {
+      background: #1A2A6C;
+      color: white;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      height: 48px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 12px rgba(26,42,108,0.35);
+    }
+    .nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; color:white; }
+    .nav-duke { font-family:'Nunito',sans-serif; font-size:1.05rem; font-weight:800; }
+    .nav-sep  { width:1px; height:22px; background:rgba(255,255,255,0.25); }
+    .nav-title { font-size:0.82rem; color:#4DB6AC; font-weight:500; }
+    .nav-back {
+      margin-left: auto;
+      background: rgba(255,255,255,0.12);
+      border: none; color: white;
+      padding: 6px 14px; border-radius: 8px;
+      cursor: pointer; font-family:'DM Sans',sans-serif;
+      font-size: 0.82rem; transition: background 0.2s;
+    }
+    .nav-back:hover { background: rgba(255,255,255,0.22); }
+
+    /* ── Selected dorm banner ── */
+    .dorm-banner {
+      background: linear-gradient(90deg, #1A2A6C 0%, #2A3F8F 100%);
+      color: white;
+      padding: 10px 40px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-shrink: 0;
+      border-bottom: 3px solid #4DB6AC;
+    }
+    .dorm-banner.hidden { display: none; }
+    .banner-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.7;
+      font-weight: 500;
+    }
+    .banner-name {
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #ffd580;
+    }
+    .banner-sep { width: 1px; height: 28px; background: rgba(255,255,255,0.2); }
+    .banner-stat { text-align: center; }
+    .banner-stat .bval {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.05rem;
+      font-weight: 500;
+    }
+    .banner-stat .blbl {
+      font-size: 0.63rem;
+      opacity: 0.65;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 1px;
+    }
+    .banner-tag {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+    }
+    .banner-tag.good { background: rgba(46,158,107,0.25); color: #5ee8a8; border: 1px solid rgba(46,158,107,0.4); }
+    .banner-tag.bad  { background: rgba(217,79,79,0.25);  color: #f8a0a0; border: 1px solid rgba(217,79,79,0.4); }
+
+    /* ── footnote ── */
+    .footnote {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.35);
+      border-radius: 10px;
+      font-size: 0.73rem;
+      color: var(--navy);
+      line-height: 1.6;
+      max-width: 900px;
+    }
+    .footnote strong { font-weight: 700; }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      display: flex;
+      align-items: flex-end;
+      padding: 20px 40px 0;
+      gap: 4px;
+    }
+
+    .tab {
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--navy);
+      padding: 11px 34px 13px;
+      border-radius: 14px 14px 0 0;
+      cursor: pointer;
+      background: var(--tab-inactive);
+      opacity: 0.75;
+      transition: background 0.2s, opacity 0.2s;
+      user-select: none;
+    }
+    .tab:hover { opacity: 0.92; }
+    .tab.active { background: var(--tab-active); opacity: 1; }
+
+    .tab-underline {
+      height: 16px;
+      background: var(--tab-bar);
+      margin-bottom: 28px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* ── Panels ── */
+    .panel { display: none; padding: 0 40px 48px; }
+    .panel.active { display: block; }
+
+    /* ── Utility toggle row ── */
+    .utility-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .utility-row label {
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--navy);
+      opacity: 0.75;
+    }
+    .utl-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      padding: 7px 16px;
+      border-radius: 20px;
+      border: 2px solid rgba(26,58,92,0.3);
+      background: rgba(255,255,255,0.35);
+      color: var(--navy);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .utl-btn.active { background: var(--navy); color: white; border-color: var(--navy); }
+    .utl-btn:hover:not(.active) { background: rgba(255,255,255,0.6); }
+
+    .month-select {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(26,58,92,0.25);
+      background: rgba(255,255,255,0.55);
+      color: var(--navy);
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* ── Rankings list ── */
+    .rankings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      max-width: 580px;
+    }
+
+    .rank-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .rank-icon {
+      font-size: 1.8rem;
+      width: 40px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .rank-bar {
+      flex: 1;
+      background: var(--card-rest);
+      border-radius: 12px;
+      padding: 13px 20px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--navy);
+      transition: background 0.2s, transform 0.15s;
+      cursor: default;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rank-bar:hover { background: var(--card-hover); transform: translateX(4px); }
+    .rank-row:first-child .rank-bar { background: var(--card-first); font-size: 1.18rem; }
+    .rank-bar.selected-dorm { background: var(--card-selected) !important; outline: 2px solid rgba(192,89,58,0.7); }
+
+    .rank-number { font-size: 0.82rem; opacity: 0.5; margin-right: 8px; }
+    .rank-pct {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 8px;
+    }
+    .rank-pct.good { background: rgba(46,158,107,0.18); color: var(--green); }
+    .rank-pct.bad  { background: rgba(217,79,79,0.15);  color: var(--red); }
+
+    /* ── Graphs panel ── */
+    .graphs-intro {
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      opacity: 0.75;
+      margin-bottom: 18px;
+    }
+    .graphs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      max-width: 900px;
+    }
+    .graph-card {
+      background: rgba(255,255,255,0.55);
+      border-radius: 16px;
+      padding: 20px 22px 16px;
+      backdrop-filter: blur(4px);
+    }
+    .graph-card h3 {
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 10px;
+    }
+
+    /* ── Impact panel ── */
+    .impact-header {
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      opacity: 0.7;
+      margin-bottom: 18px;
+    }
+    .impact-stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      max-width: 760px;
+      margin-bottom: 24px;
+    }
+    .impact-stat {
+      background: #1A2A6C;
+      border-radius: 14px;
+      padding: 18px 16px;
+      text-align: center;
+      color: white;
+    }
+    .impact-stat .val {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.7rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .impact-stat .lbl {
+      font-size: 0.7rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .impact-env-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 12px;
+      max-width: 760px;
+      margin-bottom: 24px;
+    }
+    .env-card {
+      background: rgba(255,255,255,0.6);
+      border-radius: 14px;
+      padding: 18px 14px;
+      text-align: center;
+      border: 2px solid rgba(255,255,255,0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .env-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(26,58,92,0.15); }
+    .env-icon { font-size: 2rem; margin-bottom: 8px; }
+    .env-value { font-family:'DM Mono',monospace; font-size:1.5rem; font-weight:500; color: var(--green); margin-bottom:4px; }
+    .env-label { font-family:'Nunito',sans-serif; font-size:0.82rem; font-weight:700; color:var(--navy); margin-bottom:2px; }
+    .env-desc  { font-size:0.68rem; color:var(--navy); opacity:0.6; line-height:1.3; }
+
+    .impact-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      max-width: 760px;
+    }
+    .action-card {
+      background: rgba(255,255,255,0.55);
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 14px;
+      padding: 15px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .action-card:hover, .action-card.selected {
+      background: rgba(255,255,255,0.85);
+      border-color: var(--navy);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 14px rgba(26,58,92,0.18);
+    }
+    .action-top { display:flex; align-items:center; gap:9px; margin-bottom:6px; }
+    .action-emoji { font-size:1.4rem; }
+    .action-name { font-family:'Nunito',sans-serif; font-size:0.88rem; font-weight:800; color:var(--navy); }
+    .action-desc-txt { font-size:0.72rem; color:var(--navy); opacity:0.65; margin-bottom:7px; line-height:1.3; }
+    .action-badge {
+      display:inline-block; padding:2px 8px; border-radius:10px;
+      font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px;
+    }
+    .badge-high    { background:#FEE2E2; color:#991B1B; }
+    .badge-medium  { background:#FEF3C7; color:#92400E; }
+    .badge-highest { background:#DCFCE7; color:#166534; }
+
+    .section-label {
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--navy);
+      opacity: 0.7;
+      margin: 22px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid rgba(26,58,92,0.2);
+      max-width: 760px;
+    }
+
+    /* slider */
+    .slider-box {
+      background: rgba(255,255,255,0.55);
+      border-radius: 14px;
+      padding: 18px 20px;
+      max-width: 760px;
+      margin-bottom: 18px;
+    }
+    .slider-row-wrap { margin-bottom: 18px; }
+    .slider-row-wrap:last-child { margin-bottom: 0; }
+    .slider-top { display:flex; justify-content:space-between; margin-bottom:8px; }
+    .slider-lbl { font-size:0.85rem; color:var(--navy); font-weight:500; }
+    .slider-val {
+      font-family:'DM Mono',monospace; font-size:0.88rem; font-weight:500;
+      background: var(--navy); color:white; padding:3px 10px; border-radius:10px;
+    }
+    input[type=range] { -webkit-appearance:none; width:100%; height:5px; border-radius:3px; background:rgba(26,58,92,0.2); cursor:pointer; border:none; outline:none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--navy); cursor:pointer; box-shadow:0 2px 6px rgba(26,58,92,0.35); }
+    .slider-marks { display:flex; justify-content:space-between; font-size:0.67rem; color:var(--navy); opacity:0.5; margin-top:5px; }
+
+    .impact-result-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      max-width: 760px;
+      margin-bottom: 20px;
+    }
+    .result-card {
+      background: #1A2A6C;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      color: white;
+    }
+    .result-val { font-family:'DM Mono',monospace; font-size:1.5rem; margin-bottom:4px; }
+    .result-lbl { font-size:0.68rem; opacity:0.8; text-transform:uppercase; letter-spacing:0.4px; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-thumb { background:rgba(26,58,92,0.2); border-radius:4px; }
+  </style>
+</head>
+<body>
+
+<!-- Top nav -->
+<nav class="topnav">
+  <a class="nav-logo" href="https://students.duke.edu/office-of-sustainability/" target="_blank">
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+      <rect width="22" height="22" rx="4" fill="#4DB6AC"/>
+      <text x="4" y="16" font-size="13" font-weight="900" fill="white" font-family="Georgia">D</text>
+    </svg>
+    <span class="nav-duke">Duke Student Affairs</span>
+  </a>
+  <div class="nav-sep"></div>
+  <span class="nav-title">Residence Hall Utility Dashboard</span>
+  <button class="nav-back" onclick="location.href='map.html'">← Back to Map</button>
+</nav>
+
+<!-- Selected dorm banner -->
+<div class="dorm-banner hidden" id="dormBanner">
+  <div>
+    <div class="banner-label">Your Selected Dorm</div>
+    <div class="banner-name" id="bannerName">—</div>
+  </div>
+  <div class="banner-sep"></div>
+  <div class="banner-stat">
+    <div class="bval" id="bannerRank">—</div>
+    <div class="blbl">Elec. Rank (Dec→Jan)</div>
+  </div>
+  <div class="banner-stat">
+    <div class="bval" id="bannerChange">—</div>
+    <div class="blbl">% Change</div>
+  </div>
+  <div class="banner-stat">
+    <div class="bval" id="bannerJan">—</div>
+    <div class="blbl">MMBtu (Jan)</div>
+  </div>
+  <div class="banner-stat">
+    <div class="bval" id="bannerCap">—</div>
+    <div class="blbl">Students</div>
+  </div>
+  <div id="bannerTag" class="banner-tag good" style="margin-left:8px;"></div>
+</div>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('rankings', this)">Rankings</div>
+  <div class="tab" onclick="switchTab('graphs', this)">Graphs</div>
+  <div class="tab" onclick="switchTab('impact', this)">Impact</div>
+</div>
+<div class="tab-underline"></div>
+
+<!-- ── RANKINGS PANEL ── -->
+<div class="panel active" id="panel-rankings">
+  <div class="utility-row">
+    <label>Show:</label>
+    <button class="utl-btn active" onclick="setUtility('electricity', this)">⚡ Electricity</button>
+    <button class="utl-btn" onclick="setUtility('water', this)">💧 Water</button>
+    <select class="month-select" id="monthSelect" onchange="buildRankings()">
+      <option value="Dec-Jan">Dec → Jan 2026</option>
+      <option value="Nov-Dec">Nov → Dec 2025</option>
+      <option value="Oct-Nov">Oct → Nov 2025</option>
+      <option value="Sep-Oct">Sep → Oct 2025</option>
+      <option value="Aug-Sep">Aug → Sep 2025</option>
+    </select>
+  </div>
+  <div class="rankings-list" id="rankings-list"></div>
+</div>
+
+<!-- ── GRAPHS PANEL ── -->
+<div class="panel" id="panel-graphs">
+  <div class="graphs-intro">All 13 buildings — electricity & water over time</div>
+  <div class="utility-row" style="margin-bottom:16px;">
+    <button class="utl-btn active" id="gUtlElec" onclick="setGraphUtility('electricity', this)">⚡ Electricity</button>
+    <button class="utl-btn" id="gUtlWater" onclick="setGraphUtility('water', this)">💧 Water</button>
+  </div>
+  <div class="graphs-grid">
+    <div class="graph-card">
+      <h3>📊 Monthly Consumption — All Buildings</h3>
+      <div id="chartAllMonths" style="height:240px;"></div>
+    </div>
+    <div class="graph-card">
+      <h3>🏆 Dec → Jan Change by Building</h3>
+      <div id="chartChange" style="height:240px;"></div>
+    </div>
+    <div class="graph-card">
+      <h3>📈 Per-Student Usage (Jan 2026)</h3>
+      <div id="chartPerStudent" style="height:240px;"></div>
+    </div>
+    <div class="graph-card">
+      <h3>💰 Monthly Cost Comparison</h3>
+      <div id="chartCost" style="height:240px;"></div>
+    </div>
+  </div>
+  <div class="footnote">
+    <strong>📌 Ranking Method:</strong> Buildings are ranked by their percentage change in consumption from December to January. Negative % = reduction (better), Positive % = increase (needs improvement). This accounts for building size differences by comparing each building's own performance, not absolute consumption.
+    <br><br>
+    <strong>💰 Cost Data:</strong> Electricity costs shown in $/month. Water &amp; Sewer costs combined. Alspaugh Hall uses real Duke billing data; other buildings estimated from consumption rates.
+  </div>
+</div>
+
+<!-- ── IMPACT PANEL ── -->
+<div class="panel" id="panel-impact">
+
+  <div class="impact-stats-row" id="impactStats"></div>
+
+  <div class="section-label">Choose an energy-saving behavior</div>
+  <div class="impact-actions" id="impactActions"></div>
+
+  <div class="section-label">Adjust participation</div>
+  <div class="slider-box">
+    <div class="slider-row-wrap">
+      <div class="slider-top">
+        <span class="slider-lbl" id="sliderLbl">Duration (hours/day)</span>
+        <span class="slider-val" id="sliderHrsVal">10 hrs</span>
+      </div>
+      <input type="range" id="sliderHrs" min="1" max="24" value="10" oninput="updateImpact()">
+      <div class="slider-marks"><span>1 hr</span><span>6</span><span>12</span><span>18</span><span>24 hrs</span></div>
+    </div>
+    <div class="slider-row-wrap">
+      <div class="slider-top">
+        <span class="slider-lbl">Participation Rate (%)</span>
+        <span class="slider-val" id="sliderPctVal">50%</span>
+      </div>
+      <input type="range" id="sliderPct" min="5" max="100" value="50" step="5" oninput="updateImpact()">
+      <div class="slider-marks"><span>5%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+    </div>
+  </div>
+
+  <div class="section-label">Projected monthly results — all buildings combined</div>
+  <div class="impact-result-row">
+    <div class="result-card"><div class="result-val" id="rKwh">—</div><div class="result-lbl">kWh Saved</div></div>
+    <div class="result-card"><div class="result-val" id="rCo2">—</div><div class="result-lbl">kg CO₂ Avoided</div></div>
+    <div class="result-card"><div class="result-val" id="rCost">—</div><div class="result-lbl">$ Saved</div></div>
+    <div class="result-card"><div class="result-val" id="rPct">—</div><div class="result-lbl">Avg % Reduction</div></div>
+  </div>
+
+  <div class="section-label">🌍 Real-world equivalents</div>
+  <div class="impact-env-grid">
+    <div class="env-card"><div class="env-icon">🌳</div><div class="env-value" id="envTrees">—</div><div class="env-label">Trees Planted</div><div class="env-desc">CO₂ absorbed per year</div></div>
+    <div class="env-card"><div class="env-icon">🚗</div><div class="env-value" id="envMiles">—</div><div class="env-label">Miles Not Driven</div><div class="env-desc">Equivalent emissions saved</div></div>
+    <div class="env-card"><div class="env-icon">💡</div><div class="env-value" id="envHomes">—</div><div class="env-label">Homes Powered</div><div class="env-desc">For one full day</div></div>
+    <div class="env-card"><div class="env-icon">📱</div><div class="env-value" id="envPhones">—</div><div class="env-label">Phones Charged</div><div class="env-desc">Full battery charges</div></div>
+    <div class="env-card"><div class="env-icon">💧</div><div class="env-value" id="envWater">—</div><div class="env-label">Gallons Water Saved</div><div class="env-desc">From power generation</div></div>
+    <div class="env-card"><div class="env-icon">♻️</div><div class="env-value" id="envRecycle">—</div><div class="env-label">Lbs Waste Recycled</div><div class="env-desc">Instead of landfilled</div></div>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────
+const BUILDINGS = [{"name":"Bassett Hall","capacity":115,"electricity_dec":839.09,"electricity_jan":699.29,"elec_pct_change":3.2,"elec_improvement_rank":7,"water_dec":303436,"water_jan":295499,"water_pct_change":-4.1,"water_improvement_rank":1,"electricity_cost_dec":20977.18,"electricity_cost_jan":17482.16,"water_cost_dec":18206.17,"water_cost_jan":17729.97,"electricity_aug":442.33,"electricity_sep":401.1,"electricity_oct":520.06,"electricity_nov":649.51,"electricity_feb":786.9,"electricity_mar":596.89,"electricity_apr":445.36,"electricity_may":482.56,"electricity_jun":471.99,"electricity_jul":568.75,"water_aug":335525,"water_sep":281354,"water_oct":328430,"water_nov":303852,"water_feb":321544,"water_mar":318632,"water_apr":267928,"water_may":310263,"water_jun":298315,"water_jul":316192,"electricity_cost_aug":11058.3,"electricity_cost_sep":10027.59,"electricity_cost_oct":13001.47,"electricity_cost_nov":16237.76,"electricity_cost_feb":19672.51,"electricity_cost_mar":14922.21,"electricity_cost_apr":11134.03,"electricity_cost_may":12063.95,"electricity_cost_jun":11799.76,"electricity_cost_jul":14218.87,"water_cost_aug":20131.5,"water_cost_sep":16881.23,"water_cost_oct":19705.83,"water_cost_nov":18231.1,"water_cost_feb":19292.66,"water_cost_mar":19117.9,"water_cost_apr":16075.67,"water_cost_may":18615.79,"water_cost_jun":17898.91,"water_cost_jul":18971.51},{"name":"West Hall","capacity":110,"electricity_dec":648.92,"electricity_jan":662.93,"elec_pct_change":5.95,"elec_improvement_rank":9,"water_dec":317015,"water_jan":278894,"water_pct_change":-2.37,"water_improvement_rank":2,"electricity_cost_dec":16222.93,"electricity_cost_jan":16573.24,"water_cost_dec":19020.91,"water_cost_jan":16733.67,"electricity_aug":467.94,"electricity_sep":554.55,"electricity_oct":546.86,"electricity_nov":711.76,"electricity_feb":818.57,"electricity_mar":614.88,"electricity_apr":540.71,"electricity_may":426.48,"electricity_jun":370.29,"electricity_jul":392.1,"water_aug":296071,"water_sep":299510,"water_oct":324300,"water_nov":297229,"water_feb":270922,"water_mar":293524,"water_apr":283680,"water_may":292565,"water_jun":276250,"water_jul":283379,"electricity_cost_aug":11698.54,"electricity_cost_sep":13863.73,"electricity_cost_oct":13671.44,"electricity_cost_nov":17793.99,"electricity_cost_feb":20464.37,"electricity_cost_mar":15372.12,"electricity_cost_apr":13517.87,"electricity_cost_may":10661.88,"electricity_cost_jun":9257.15,"electricity_cost_jul":9802.48,"water_cost_aug":17764.25,"water_cost_sep":17970.59,"water_cost_oct":19458.01,"water_cost_nov":17833.72,"water_cost_feb":16255.34,"water_cost_mar":17611.45,"water_cost_apr":17020.82,"water_cost_may":17553.88,"water_cost_jun":16574.99,"water_cost_jul":17002.72},{"name":"Giles Hall","capacity":85,"electricity_dec":493.63,"electricity_jan":578.14,"elec_pct_change":-9.54,"elec_improvement_rank":1,"water_dec":248722,"water_jan":223352,"water_pct_change":-0.71,"water_improvement_rank":3,"electricity_cost_dec":12340.8,"electricity_cost_jan":14453.42,"water_cost_dec":14923.33,"water_cost_jan":13401.1,"electricity_aug":455.4,"electricity_sep":407.14,"electricity_oct":462.73,"electricity_nov":539.43,"electricity_feb":547.54,"electricity_mar":363.49,"electricity_apr":414.07,"electricity_may":320.42,"electricity_jun":300.35,"electricity_jul":436.32,"water_aug":242496,"water_sep":227209,"water_oct":226740,"water_nov":241086,"water_feb":241704,"water_mar":235138,"water_apr":228005,"water_may":219863,"water_jun":212187,"water_jul":220746,"electricity_cost_aug":11385.06,"electricity_cost_sep":10178.55,"electricity_cost_oct":11568.37,"electricity_cost_nov":13485.79,"electricity_cost_feb":13688.6,"electricity_cost_mar":9087.29,"electricity_cost_apr":10351.68,"electricity_cost_may":8010.48,"electricity_cost_jun":7508.7,"electricity_cost_jul":10908.02,"water_cost_aug":14549.75,"water_cost_sep":13632.53,"water_cost_oct":13604.42,"water_cost_nov":14465.16,"water_cost_feb":14502.21,"water_cost_mar":14108.31,"water_cost_apr":13680.3,"water_cost_may":13191.8,"water_cost_jun":12731.24,"water_cost_jul":13244.76},{"name":"Pegram Hall","capacity":95,"electricity_dec":468.31,"electricity_jan":771.13,"elec_pct_change":13.29,"elec_improvement_rank":13,"water_dec":285954,"water_jan":238608,"water_pct_change":-0.16,"water_improvement_rank":4,"electricity_cost_dec":11707.84,"electricity_cost_jan":19278.16,"water_cost_dec":17157.27,"water_cost_jan":14316.49,"electricity_aug":325.6,"electricity_sep":405.3,"electricity_oct":377.72,"electricity_nov":549.04,"electricity_feb":453.32,"electricity_mar":377.18,"electricity_apr":340.38,"electricity_may":431.8,"electricity_jun":395.83,"electricity_jul":340.25,"water_aug":271022,"water_sep":262323,"water_oct":279817,"water_nov":288558,"water_feb":243593,"water_mar":263571,"water_apr":252568,"water_may":245543,"water_jun":224574,"water_jul":232974,"electricity_cost_aug":8139.93,"electricity_cost_sep":10132.47,"electricity_cost_oct":9443.03,"electricity_cost_nov":13725.94,"electricity_cost_feb":11333.08,"electricity_cost_mar":9429.55,"electricity_cost_apr":8509.48,"electricity_cost_may":10795.09,"electricity_cost_jun":9895.83,"electricity_cost_jul":8506.26,"water_cost_aug":16261.3,"water_cost_sep":15739.37,"water_cost_oct":16789.04,"water_cost_nov":17313.46,"water_cost_feb":14615.6,"water_cost_mar":15814.26,"water_cost_apr":15154.1,"water_cost_may":14732.57,"water_cost_jun":13474.46,"water_cost_jul":13978.43},{"name":"Trinity Hall","capacity":120,"electricity_dec":585.24,"electricity_jan":974.69,"elec_pct_change":-3.61,"elec_improvement_rank":5,"water_dec":359435,"water_jan":356262,"water_pct_change":0.88,"water_improvement_rank":5,"electricity_cost_dec":14630.89,"electricity_cost_jan":24367.17,"water_cost_dec":21566.09,"water_cost_jan":21375.71,"electricity_aug":635.16,"electricity_sep":570.15,"electricity_oct":525.79,"electricity_nov":835.47,"electricity_feb":864.36,"electricity_mar":705.37,"electricity_apr":608.77,"electricity_may":462.74,"electricity_jun":398.28,"electricity_jul":621.13,"water_aug":323020,"water_sep":320591,"water_oct":311780,"water_nov":366330,"water_feb":329451,"water_mar":307619,"water_apr":314104,"water_may":298378,"water_jun":309778,"water_jul":296782,"electricity_cost_aug":15878.96,"electricity_cost_sep":14253.63,"electricity_cost_oct":13144.65,"electricity_cost_nov":20886.66,"electricity_cost_feb":21608.91,"electricity_cost_mar":17634.23,"electricity_cost_apr":15219.28,"electricity_cost_may":11568.39,"electricity_cost_jun":9957.01,"electricity_cost_jul":15528.3,"water_cost_aug":19381.18,"water_cost_sep":19235.45,"water_cost_oct":18706.78,"water_cost_nov":21979.82,"water_cost_feb":19767.08,"water_cost_mar":18457.13,"water_cost_apr":18846.24,"water_cost_may":17902.7,"water_cost_jun":18586.66,"water_cost_jul":17806.93},{"name":"Blackwell Hall","capacity":112,"electricity_dec":719.27,"electricity_jan":850.36,"elec_pct_change":-8.53,"elec_improvement_rank":3,"water_dec":296798,"water_jan":298475,"water_pct_change":1.35,"water_improvement_rank":6,"electricity_cost_dec":17981.86,"electricity_cost_jan":21259.05,"water_cost_dec":17807.86,"water_cost_jan":17908.47,"electricity_aug":610.68,"electricity_sep":488.72,"electricity_oct":630.29,"electricity_nov":557.33,"electricity_feb":781.93,"electricity_mar":450.97,"electricity_apr":605.97,"electricity_may":404.94,"electricity_jun":468.69,"electricity_jul":514.13,"water_aug":314628,"water_sep":285242,"water_oct":298353,"water_nov":317640,"water_feb":276788,"water_mar":314518,"water_apr":275139,"water_may":254861,"water_jun":271838,"water_jul":315955,"electricity_cost_aug":15267.01,"electricity_cost_sep":12217.97,"electricity_cost_oct":15757.22,"electricity_cost_nov":13933.16,"electricity_cost_feb":19548.2,"electricity_cost_mar":11274.19,"electricity_cost_apr":15149.13,"electricity_cost_may":10123.4,"electricity_cost_jun":11717.25,"electricity_cost_jul":12853.32,"water_cost_aug":18877.7,"water_cost_sep":17114.54,"water_cost_oct":17901.17,"water_cost_nov":19058.4,"water_cost_feb":16607.27,"water_cost_mar":18871.07,"water_cost_apr":16508.36,"water_cost_may":15291.69,"water_cost_jun":16310.28,"water_cost_jul":18957.32},{"name":"Randolph Hall","capacity":96,"electricity_dec":739.37,"electricity_jan":550.67,"elec_pct_change":8.19,"elec_improvement_rank":10,"water_dec":285230,"water_jan":274314,"water_pct_change":2.98,"water_improvement_rank":7,"electricity_cost_dec":18484.31,"electricity_cost_jan":13766.77,"water_cost_dec":17113.83,"water_cost_jan":16458.85,"electricity_aug":438.52,"electricity_sep":404.39,"electricity_oct":491.35,"electricity_nov":650.61,"electricity_feb":600.93,"electricity_mar":559.44,"electricity_apr":513.57,"electricity_may":384.49,"electricity_jun":431.92,"electricity_jul":467.15,"water_aug":255171,"water_sep":253370,"water_oct":257953,"water_nov":255954,"water_feb":272369,"water_mar":256329,"water_apr":246766,"water_may":237803,"water_jun":238499,"water_jul":261591,"electricity_cost_aug":10963.11,"electricity_cost_sep":10109.65,"electricity_cost_oct":12283.81,"electricity_cost_nov":16265.29,"electricity_cost_feb":15023.33,"electricity_cost_mar":13986.05,"electricity_cost_apr":12839.25,"electricity_cost_may":9612.36,"electricity_cost_jun":10798.08,"electricity_cost_jul":11678.82,"water_cost_aug":15310.26,"water_cost_sep":15202.19,"water_cost_oct":15477.18,"water_cost_nov":15357.25,"water_cost_feb":16342.12,"water_cost_mar":15379.75,"water_cost_apr":14805.98,"water_cost_may":14268.18,"water_cost_jun":14309.94,"water_cost_jul":15695.43},{"name":"Brown Hall","capacity":108,"electricity_dec":521.07,"electricity_jan":833.09,"elec_pct_change":-9.03,"elec_improvement_rank":2,"water_dec":309283,"water_jan":302360,"water_pct_change":3.27,"water_improvement_rank":8,"electricity_cost_dec":13026.69,"electricity_cost_jan":20827.2,"water_cost_dec":18556.99,"water_cost_jan":18141.57,"electricity_aug":582.25,"electricity_sep":438.08,"electricity_oct":525.55,"electricity_nov":654.3,"electricity_feb":693.14,"electricity_mar":447.31,"electricity_apr":393.4,"electricity_may":333.98,"electricity_jun":434.0,"electricity_jul":350.19,"water_aug":294033,"water_sep":284783,"water_oct":301758,"water_nov":308079,"water_feb":297360,"water_mar":297257,"water_apr":271729,"water_may":288313,"water_jun":245537,"water_jul":278661,"electricity_cost_aug":14556.24,"electricity_cost_sep":10951.99,"electricity_cost_oct":13138.73,"electricity_cost_nov":16357.57,"electricity_cost_feb":17328.5,"electricity_cost_mar":11182.76,"electricity_cost_apr":9834.99,"electricity_cost_may":8349.55,"electricity_cost_jun":10850.03,"electricity_cost_jul":8754.72,"water_cost_aug":17641.98,"water_cost_sep":17086.99,"water_cost_oct":18105.49,"water_cost_nov":18484.73,"water_cost_feb":17841.61,"water_cost_mar":17835.4,"water_cost_apr":16303.71,"water_cost_may":17298.77,"water_cost_jun":14732.24,"water_cost_jul":16719.68},{"name":"Gilbert-Addoms","capacity":102,"electricity_dec":738.37,"electricity_jan":795.39,"elec_pct_change":12.48,"elec_improvement_rank":12,"water_dec":309762,"water_jan":263312,"water_pct_change":4.17,"water_improvement_rank":9,"electricity_cost_dec":18459.32,"electricity_cost_jan":19884.79,"water_cost_dec":18585.71,"water_cost_jan":15798.7,"electricity_aug":468.23,"electricity_sep":490.21,"electricity_oct":518.18,"electricity_nov":696.41,"electricity_feb":649.69,"electricity_mar":485.36,"electricity_apr":522.37,"electricity_may":319.49,"electricity_jun":328.11,"electricity_jul":399.61,"water_aug":296644,"water_sep":254673,"water_oct":294871,"water_nov":263373,"water_feb":263970,"water_mar":255529,"water_apr":239618,"water_may":235255,"water_jun":242224,"water_jul":289598,"electricity_cost_aug":11705.83,"electricity_cost_sep":12255.28,"electricity_cost_oct":12954.43,"electricity_cost_nov":17410.24,"electricity_cost_feb":16242.17,"electricity_cost_mar":12133.92,"electricity_cost_apr":13059.15,"electricity_cost_may":7987.34,"electricity_cost_jun":8202.82,"electricity_cost_jul":9990.28,"water_cost_aug":17798.63,"water_cost_sep":15280.37,"water_cost_oct":17692.28,"water_cost_nov":15802.39,"water_cost_feb":15838.22,"water_cost_mar":15331.76,"water_cost_apr":14377.05,"water_cost_may":14115.32,"water_cost_jun":14533.41,"water_cost_jul":17375.86},{"name":"Bell Tower Hall","capacity":130,"electricity_dec":859.85,"electricity_jan":771.53,"elec_pct_change":-7.57,"elec_improvement_rank":4,"water_dec":365338,"water_jan":365619,"water_pct_change":5.27,"water_improvement_rank":10,"electricity_cost_dec":21496.3,"electricity_cost_jan":19288.2,"water_cost_dec":21920.28,"water_cost_jan":21937.14,"electricity_aug":687.89,"electricity_sep":532.0,"electricity_oct":626.78,"electricity_nov":754.01,"electricity_feb":732.57,"electricity_mar":516.82,"electricity_apr":480.24,"electricity_may":598.79,"electricity_jun":393.49,"electricity_jul":506.64,"water_aug":344908,"water_sep":331034,"water_oct":372324,"water_nov":397127,"water_feb":352060,"water_mar":353699,"water_apr":349377,"water_may":294007,"water_jun":289027,"water_jul":319684,"electricity_cost_aug":17197.33,"electricity_cost_sep":13300.0,"electricity_cost_oct":15669.4,"electricity_cost_nov":18850.27,"electricity_cost_feb":18314.27,"electricity_cost_mar":12920.44,"electricity_cost_apr":12005.89,"electricity_cost_may":14969.64,"electricity_cost_jun":9837.14,"electricity_cost_jul":12665.94,"water_cost_aug":20694.48,"water_cost_sep":19862.02,"water_cost_oct":22339.42,"water_cost_nov":23827.59,"water_cost_feb":21123.62,"water_cost_mar":21221.96,"water_cost_apr":20962.62,"water_cost_may":17640.44,"water_cost_jun":17341.64,"water_cost_jul":19181.03},{"name":"Alspaugh Hall","capacity":100,"electricity_dec":731.78,"electricity_jan":739.91,"elec_pct_change":1.11,"elec_improvement_rank":6,"water_dec":288248,"water_jan":266424,"water_pct_change":5.94,"water_improvement_rank":11,"electricity_cost_dec":18294.09,"electricity_cost_jan":17805.78,"water_cost_dec":17294.88,"water_cost_jan":15985.46,"electricity_aug":383.62,"electricity_sep":285.32,"electricity_oct":377.42,"electricity_nov":604.34,"electricity_feb":685.06,"electricity_mar":516.0,"electricity_apr":672.75,"electricity_may":259.94,"electricity_jun":300.69,"electricity_jul":383.18,"water_aug":280892,"water_sep":286163,"water_oct":282723,"water_nov":292703,"water_feb":252229,"water_mar":279006,"water_apr":251287,"water_may":258184,"water_jun":230543,"water_jul":271183,"electricity_cost_aug":11486.75,"electricity_cost_sep":12269.13,"electricity_cost_oct":13525.11,"electricity_cost_nov":17618.14,"electricity_cost_feb":18518.42,"electricity_cost_mar":14045.63,"electricity_cost_apr":18052.44,"electricity_cost_may":7699.72,"electricity_cost_jun":8978.9,"electricity_cost_jul":10287.37,"water_cost_aug":16853.51,"water_cost_sep":17169.77,"water_cost_oct":16963.4,"water_cost_nov":17562.16,"water_cost_feb":15133.75,"water_cost_mar":16740.35,"water_cost_apr":15077.24,"water_cost_may":15491.02,"water_cost_jun":13832.59,"water_cost_jul":16270.95},{"name":"Wilson Hall","capacity":98,"electricity_dec":581.48,"electricity_jan":730.17,"elec_pct_change":3.37,"elec_improvement_rank":8,"water_dec":297591,"water_jan":274671,"water_pct_change":6.07,"water_improvement_rank":12,"electricity_cost_dec":14536.9,"electricity_cost_jan":18254.16,"water_cost_dec":17855.48,"water_cost_jan":16480.27,"electricity_aug":516.37,"electricity_sep":375.32,"electricity_oct":400.32,"electricity_nov":690.72,"electricity_feb":646.36,"electricity_mar":471.7,"electricity_apr":487.21,"electricity_may":441.4,"electricity_jun":342.82,"electricity_jul":347.05,"water_aug":253610,"water_sep":243398,"water_oct":256156,"water_nov":292422,"water_feb":253408,"water_mar":256287,"water_apr":241968,"water_may":245671,"water_jun":219006,"water_jul":265266,"electricity_cost_aug":12909.27,"electricity_cost_sep":9383.02,"electricity_cost_oct":10007.98,"electricity_cost_nov":17268.0,"electricity_cost_feb":16159.0,"electricity_cost_mar":11792.48,"electricity_cost_apr":12180.27,"electricity_cost_may":11035.08,"electricity_cost_jun":8570.41,"electricity_cost_jul":8676.19,"water_cost_aug":15216.6,"water_cost_sep":14603.91,"water_cost_oct":15369.37,"water_cost_nov":17545.31,"water_cost_feb":15204.51,"water_cost_mar":15377.24,"water_cost_apr":14518.08,"water_cost_may":14740.27,"water_cost_jun":13140.34,"water_cost_jul":15915.98},{"name":"Southgate Hall","capacity":88,"electricity_dec":624.15,"electricity_jan":640.26,"elec_pct_change":9.78,"elec_improvement_rank":11,"water_dec":249294,"water_jan":245605,"water_pct_change":7.74,"water_improvement_rank":13,"electricity_cost_dec":15603.84,"electricity_cost_jan":16006.42,"water_cost_dec":14957.65,"water_cost_jan":14736.28,"electricity_aug":392.81,"electricity_sep":373.65,"electricity_oct":466.32,"electricity_nov":587.51,"electricity_feb":625.03,"electricity_mar":463.57,"electricity_apr":370.1,"electricity_may":270.74,"electricity_jun":320.83,"electricity_jul":305.6,"water_aug":232426,"water_sep":213732,"water_oct":243759,"water_nov":236803,"water_feb":227282,"water_mar":233629,"water_apr":237686,"water_may":200401,"water_jun":221525,"water_jul":216229,"electricity_cost_aug":9820.25,"electricity_cost_sep":9341.17,"electricity_cost_oct":11658.0,"electricity_cost_nov":14687.78,"electricity_cost_feb":15625.73,"electricity_cost_mar":11589.22,"electricity_cost_apr":9252.48,"electricity_cost_may":6768.59,"electricity_cost_jun":8020.66,"electricity_cost_jul":7640.12,"water_cost_aug":13945.53,"water_cost_sep":12823.92,"water_cost_oct":14625.52,"water_cost_nov":14208.2,"water_cost_feb":13636.94,"water_cost_mar":14017.72,"water_cost_apr":14261.19,"water_cost_may":12024.05,"water_cost_jun":13291.51,"water_cost_jul":12973.74}];
+
+const RESEARCH_ACTIONS = [
+  {id:1, short_name:"🌡️ Thermostat +2°F", description:"Adjust thermostat by 2°F for 10 hours/day", kwh_per_student_day:1.3, hours_range:[1,24], default_hours:10, impact_level:"HIGH"},
+  {id:2, short_name:"🔌 Unplug Devices",   description:"Unplug devices when not in room",         kwh_per_student_day:0.6, hours_range:[1,24], default_hours:8,  impact_level:"MEDIUM"},
+  {id:3, short_name:"💡 Turn Off Lights",  description:"Turn off lights when leaving room",        kwh_per_student_day:0.12,hours_range:[1,12], default_hours:6,  impact_level:"MEDIUM"},
+  {id:4, short_name:"💻 Computer Sleep",   description:"Enable sleep mode on computers/monitors",  kwh_per_student_day:1.1, hours_range:[1,24], default_hours:12, impact_level:"MEDIUM"},
+  {id:5, short_name:"⚡ All Behaviors",    description:"Implement all energy-saving behaviors",    kwh_per_student_day:3.12,hours_range:[1,24], default_hours:10, impact_level:"HIGHEST"},
+];
+
+// Map dorm zone values → building names
+const DORM_MAP = {
+  bell_tower:"Bell Tower Hall", randolph:"Randolph Hall", trinity:"Trinity Hall",
+  southgate:"Southgate Hall",  blackwell:"Blackwell Hall", gilbert_addoms:"Gilbert-Addoms",
+  pegram:"Pegram Hall",        alspaugh:"Alspaugh Hall",   giles:"Giles Hall",
+  west_house:"West Hall",      bassett:"Bassett Hall",     brown:"Brown Hall",
+  wilson:"Wilson Hall"
+};
+
+const MONTHS_ORDER = ['aug','sep','oct','nov','dec','jan','feb','mar','apr','may','jun','jul'];
+const MONTHS_LABEL = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'];
+
+let currentUtility   = 'electricity';
+let graphUtility     = 'electricity';
+let selectedActionIdx = 0;
+
+// Get selected dorm from URL param
+const urlParams = new URLSearchParams(window.location.search);
+const selectedDormValue = urlParams.get('dorm') || null;
+const selectedDormName  = selectedDormValue ? (DORM_MAP[selectedDormValue] || null) : null;
+
+// ── MONTH COMPARISON HELPERS ─────────────────────────────────────────
+const MONTH_PAIRS = {
+  'Dec-Jan': {prev:'dec', curr:'jan'},
+  'Nov-Dec': {prev:'nov', curr:'dec'},
+  'Oct-Nov': {prev:'oct', curr:'nov'},
+  'Sep-Oct': {prev:'sep', curr:'oct'},
+  'Aug-Sep': {prev:'aug', curr:'sep'},
+};
+
+function getPrevCurr() {
+  const key = document.getElementById('monthSelect').value;
+  return MONTH_PAIRS[key] || MONTH_PAIRS['Dec-Jan'];
+}
+
+// ── RANKINGS ─────────────────────────────────────────────────────────
+function setUtility(type, btn) {
+  currentUtility = type;
+  document.querySelectorAll('#panel-rankings .utl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildRankings();
+}
+
+function buildRankings() {
+  const {prev, curr} = getPrevCurr();
+  const isElec = currentUtility === 'electricity';
+  const prevField = isElec ? `electricity_${prev}` : `water_${prev}`;
+  const currField = isElec ? `electricity_${curr}` : `water_${curr}`;
+
+  const ranked = BUILDINGS.map(b => {
+    const pv = b[prevField] || 0;
+    const cv = b[currField] || 0;
+    const pct = pv > 0 ? ((cv - pv) / pv * 100) : 0;
+    return { ...b, pct };
+  }).sort((a, b) => a.pct - b.pct); // best (most reduction) first
+
+  const icons = ['👑','🥈','🥉'];
+  const list = document.getElementById('rankings-list');
+  list.innerHTML = '';
+
+  ranked.forEach((b, i) => {
+    const row = document.createElement('div');
+    row.className = 'rank-row';
+    const isSelected = b.name === selectedDormName;
+    const pctClass   = b.pct <= 0 ? 'good' : 'bad';
+    const pctSign    = b.pct > 0 ? '+' : '';
+    row.innerHTML = `
+      <div class="rank-icon">${icons[i] || ''}</div>
+      <div class="rank-bar${isSelected ? ' selected-dorm' : ''}">
+        <span><span class="rank-number">${i+1}.</span>${b.name}${isSelected ? ' ⭐' : ''}</span>
+        <span class="rank-pct ${pctClass}">${pctSign}${b.pct.toFixed(1)}%</span>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+// ── GRAPHS ───────────────────────────────────────────────────────────
+function setGraphUtility(type, btn) {
+  graphUtility = type;
+  document.querySelectorAll('#panel-graphs .utl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildGraphs();
+}
+
+function buildGraphs() {
+  const isElec = graphUtility === 'electricity';
+  const prefix = isElec ? 'electricity_' : 'water_';
+  const costPfx = isElec ? 'electricity_cost_' : 'water_cost_';
+  const unit = isElec ? 'MMBtu' : 'gallons';
+
+  // Chart 1 — all buildings monthly trend
+  const traces1 = BUILDINGS.map(b => ({
+    x: MONTHS_LABEL,
+    y: MONTHS_ORDER.map(m => b[prefix + m] || 0),
+    mode: 'lines',
+    name: b.name.replace(' Hall','').replace(' Hall',''),
+    line: { width: b.name === selectedDormName ? 3 : 1.5 },
+    opacity: b.name === selectedDormName ? 1 : 0.55,
+  }));
+  Plotly.newPlot('chartAllMonths', traces1, {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{color:'#1a3a5c',size:9}, margin:{t:4,b:36,l:44,r:4},
+    xaxis:{gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
+    yaxis:{title:unit,gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
+    showlegend:false, hovermode:'closest',
+  }, {responsive:true, displayModeBar:false});
+
+  // Chart 2 — Dec→Jan change bar
+  const sorted2 = BUILDINGS.map(b => {
+    const pv = b[prefix + 'dec'] || 0;
+    const cv = b[prefix + 'jan'] || 0;
+    const pct = pv > 0 ? ((cv - pv) / pv * 100) : 0;
+    return {...b, pct};
+  }).sort((a,b) => a.pct - b.pct);
+
+  Plotly.newPlot('chartChange', [{
+    x: sorted2.map(b => b.pct),
+    y: sorted2.map(b => b.name.replace(' Hall','')),
+    type:'bar', orientation:'h',
+    marker:{color: sorted2.map(b => b.name === selectedDormName ? '#FF9800' : (b.pct < 0 ? '#2e9e6b' : '#d94f4f'))},
+    text: sorted2.map(b => (b.pct>0?'+':'')+b.pct.toFixed(1)+'%'),
+    textposition:'outside',
+    hovertemplate:'<b>%{y}</b><br>%{x:.1f}%<extra></extra>',
+  }], {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{color:'#1a3a5c',size:8}, margin:{t:4,b:36,l:110,r:50},
+    xaxis:{gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c',zeroline:true,zerolinecolor:'#1a3a5c',zerolinewidth:1.5},
+    yaxis:{gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
+    showlegend:false,
+  }, {responsive:true, displayModeBar:false});
+
+  // Chart 3 — per-student Jan usage
+  const sorted3 = [...BUILDINGS].map(b => ({
+    name: b.name.replace(' Hall',''),
+    val: b.capacity > 0 ? (b[prefix + 'jan'] || 0) / b.capacity : 0,
+    isSelected: b.name === selectedDormName,
+  })).sort((a,b) => b.val - a.val);
+
+  Plotly.newPlot('chartPerStudent', [{
+    x: sorted3.map(b => b.name),
+    y: sorted3.map(b => b.val),
+    type:'bar',
+    marker:{color: sorted3.map(b => b.isSelected ? '#FF9800' : 'rgba(26,58,92,0.5)')},
+    hovertemplate:'<b>%{x}</b><br>%{y:.2f} per student<extra></extra>',
+  }], {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{color:'#1a3a5c',size:8}, margin:{t:4,b:60,l:44,r:4},
+    xaxis:{tickangle:-40,color:'#1a3a5c'},
+    yaxis:{title:`${unit}/student`,gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
+    showlegend:false,
+  }, {responsive:true, displayModeBar:false});
+
+  // Chart 4 — monthly cost Dec vs Jan
+  Plotly.newPlot('chartCost', [
+    {
+      x: BUILDINGS.map(b => b.name.replace(' Hall','')),
+      y: BUILDINGS.map(b => b[costPfx + 'dec'] || 0),
+      name:'Dec', type:'bar',
+      marker:{color:'rgba(26,58,92,0.6)'},
+    },
+    {
+      x: BUILDINGS.map(b => b.name.replace(' Hall','')),
+      y: BUILDINGS.map(b => b[costPfx + 'jan'] || 0),
+      name:'Jan', type:'bar',
+      marker:{color:'rgba(77,182,172,0.75)'},
+    }
+  ], {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{color:'#1a3a5c',size:8}, margin:{t:4,b:60,l:50,r:4},
+    barmode:'group',
+    xaxis:{tickangle:-40,color:'#1a3a5c'},
+    yaxis:{title:'$ / month',gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
+    showlegend:true, legend:{orientation:'h',x:0,y:1.08,font:{size:8}},
+  }, {responsive:true, displayModeBar:false});
+}
+
+// ── IMPACT ───────────────────────────────────────────────────────────
+function buildImpactActions() {
+  const grid = document.getElementById('impactActions');
+  grid.innerHTML = RESEARCH_ACTIONS.map((a, i) => {
+    const [emoji, ...rest] = a.short_name.split(' ');
+    const badgeClass = 'badge-' + a.impact_level.toLowerCase();
+    return `<div class="action-card${i===0?' selected':''}" onclick="selectImpactAction(this,${i})">
+      <div class="action-top"><span class="action-emoji">${emoji}</span><span class="action-name">${rest.join(' ')}</span></div>
+      <div class="action-desc-txt">${a.description}</div>
+      <span class="action-badge ${badgeClass}">${a.impact_level}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#2e9e6b;font-weight:500;margin-left:6px;">${a.kwh_per_student_day} kWh/student/day</span>
+    </div>`;
+  }).join('');
+}
+
+function selectImpactAction(el, idx) {
+  document.querySelectorAll('.action-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedActionIdx = idx;
+  const a = RESEARCH_ACTIONS[idx];
+  const s = document.getElementById('sliderHrs');
+  s.min = a.hours_range[0]; s.max = a.hours_range[1]; s.value = a.default_hours;
+  updateImpact();
+}
+
+function updateImpact() {
+  const a = RESEARCH_ACTIONS[selectedActionIdx];
+  const hours       = parseInt(document.getElementById('sliderHrs').value);
+  const participation = parseInt(document.getElementById('sliderPct').value);
+  document.getElementById('sliderHrsVal').textContent = `${hours} hrs`;
+  document.getElementById('sliderPctVal').textContent = `${participation}%`;
+
+  const totalStudents = BUILDINGS.reduce((sum, b) => sum + b.capacity, 0);
+  const studying      = Math.round(totalStudents * (participation / 100));
+  const kwhPerDay     = a.kwh_per_student_day * (hours / a.default_hours);
+  const monthSavings  = kwhPerDay * studying * 30;
+  const co2           = monthSavings * 0.386;
+  const cost          = monthSavings * 0.12;
+  const pctReduction  = (monthSavings / BUILDINGS.reduce((s,b) => s + (b.electricity_jan||0)*293.07, 0)) * 100;
+
+  document.getElementById('rKwh').textContent  = monthSavings.toFixed(0);
+  document.getElementById('rCo2').textContent  = co2.toFixed(0);
+  document.getElementById('rCost').textContent = '$' + cost.toFixed(0);
+  document.getElementById('rPct').textContent  = pctReduction.toFixed(1) + '%';
+
+  document.getElementById('envTrees').textContent  = (co2/21).toFixed(1);
+  document.getElementById('envMiles').textContent  = (co2/0.404).toFixed(0);
+  document.getElementById('envHomes').textContent  = (monthSavings/30).toFixed(1);
+  document.getElementById('envPhones').textContent = (monthSavings/0.015).toFixed(0);
+  document.getElementById('envWater').textContent  = (monthSavings*2).toFixed(0);
+  document.getElementById('envRecycle').textContent= (co2/0.91).toFixed(0);
+}
+
+function buildImpactStats() {
+  const totalKwh  = BUILDINGS.reduce((s,b) => s + (b.electricity_jan||0), 0);
+  const totalWater= BUILDINGS.reduce((s,b) => s + (b.water_jan||0), 0);
+  const totalCost = BUILDINGS.reduce((s,b) => s + (b.electricity_cost_jan||0) + (b.water_cost_jan||0), 0);
+  const avgChange = BUILDINGS.reduce((s,b) => s + (b.elec_pct_change||0), 0) / BUILDINGS.length;
+  const best      = BUILDINGS.reduce((a,b) => (a.elec_pct_change||0) < (b.elec_pct_change||0) ? a : b);
+
+  document.getElementById('impactStats').innerHTML = `
+    <div class="impact-stat"><div class="val">${totalKwh.toFixed(0)}</div><div class="lbl">Total MMBtu (Jan)</div></div>
+    <div class="impact-stat"><div class="val">${(totalWater/1000).toFixed(0)}k</div><div class="lbl">Total Gallons (Jan)</div></div>
+    <div class="impact-stat"><div class="val">$${(totalCost/1000).toFixed(0)}k</div><div class="lbl">Total Monthly Cost</div></div>
+    <div class="impact-stat"><div class="val">${avgChange > 0 ? '+' : ''}${avgChange.toFixed(1)}%</div><div class="lbl">Avg Elec Change</div></div>
+    <div class="impact-stat"><div class="val">${best.name.replace(' Hall','')}</div><div class="lbl">🏆 Best Performer</div></div>
+  `;
+}
+
+// ── TAB SWITCHING ────────────────────────────────────────────────────
+function switchTab(tabId, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + tabId).classList.add('active');
+  if (tabId === 'graphs') buildGraphs();
+  if (tabId === 'impact') updateImpact();
+}
+
+// ── SELECTED DORM BANNER ─────────────────────────────────────────────
+function buildBanner() {
+  if (!selectedDormName) return;
+  const b = BUILDINGS.find(x => x.name === selectedDormName);
+  if (!b) return;
+
+  // Compute rank among all buildings by elec Dec→Jan pct change
+  const ranked = BUILDINGS.map(x => {
+    const pv = x.electricity_dec || 0;
+    const cv = x.electricity_jan || 0;
+    const pct = pv > 0 ? ((cv - pv) / pv * 100) : 0;
+    return { name: x.name, pct };
+  }).sort((a, z) => a.pct - z.pct);
+  const rank = ranked.findIndex(x => x.name === selectedDormName) + 1;
+
+  const pct = b.elec_pct_change || 0;
+  const isGood = pct <= 0;
+
+  document.getElementById('bannerName').textContent   = b.name;
+  document.getElementById('bannerRank').textContent   = `#${rank} of 13`;
+  document.getElementById('bannerJan').textContent    = (b.electricity_jan || 0).toFixed(1);
+  document.getElementById('bannerCap').textContent    = b.capacity;
+
+  const changeEl = document.getElementById('bannerChange');
+  changeEl.textContent = (pct > 0 ? '+' : '') + pct.toFixed(1) + '%';
+  changeEl.style.color = isGood ? '#5ee8a8' : '#f8a0a0';
+
+  const tagEl = document.getElementById('bannerTag');
+  tagEl.textContent = isGood ? '✅ Reducing Usage' : '⚠️ Usage Increased';
+  tagEl.className   = 'banner-tag ' + (isGood ? 'good' : 'bad');
+
+  document.getElementById('dormBanner').classList.remove('hidden');
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────
+buildBanner();
+buildRankings();
+buildImpactActions();
+buildImpactStats();
+updateImpact();
+</script>
+</body>
+</html>
