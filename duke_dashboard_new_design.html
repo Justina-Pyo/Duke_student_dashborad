@@ -671,90 +671,146 @@ function buildGraphs() {
   const unit = isElec ? 'MMBtu' : 'gallons';
 
   // Chart 1 — all buildings monthly trend
-  const traces1 = BUILDINGS.map(b => ({
-    x: MONTHS_LABEL,
-    y: MONTHS_ORDER.map(m => b[prefix + m] || 0),
-    mode: 'lines',
-    name: b.name.replace(' Hall','').replace(' Hall',''),
-    line: { width: b.name === selectedDormName ? 3 : 1.5 },
-    opacity: b.name === selectedDormName ? 1 : 0.55,
-  }));
-  Plotly.newPlot('chartAllMonths', traces1, {
-    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
-    font:{color:'#1a3a5c',size:9}, margin:{t:4,b:36,l:44,r:4},
-    xaxis:{gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
-    yaxis:{title:unit,gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
-    showlegend:false, hovermode:'closest',
-  }, {responsive:true, displayModeBar:false});
+const traces1 = BUILDINGS.map(b => ({
+  x: MONTHS_LABEL,
+  y: MONTHS_ORDER.map(m => b[prefix + m] || 0),
+  mode: 'lines',
+  name: b.name.replace(' Hall',''),
+  line: {
+    width: b.name === selectedDormName ? 4 : 1.5,
+    color: b.name === selectedDormName ? '#FF5722' : '#999'
+  },
+  opacity: b.name === selectedDormName ? 1 : 0.3,
+}));
 
-  // Chart 2 — Dec→Jan change bar
-  const sorted2 = BUILDINGS.map(b => {
-    const pv = b[prefix + 'dec'] || 0;
-    const cv = b[prefix + 'jan'] || 0;
-    const pct = pv > 0 ? ((cv - pv) / pv * 100) : 0;
-    return {...b, pct};
-  }).sort((a,b) => a.pct - b.pct);
+Plotly.newPlot('chartAllMonths', traces1, {
+  title: { text: 'Monthly Energy Usage by Dorm', font:{size:16} },
 
-  Plotly.newPlot('chartChange', [{
-    x: sorted2.map(b => b.pct),
-    y: sorted2.map(b => b.name.replace(' Hall','')),
-    type:'bar', orientation:'h',
-    marker:{color: sorted2.map(b => b.name === selectedDormName ? '#FF9800' : (b.pct < 0 ? '#2e9e6b' : '#d94f4f'))},
-    text: sorted2.map(b => (b.pct>0?'+':'')+b.pct.toFixed(1)+'%'),
-    textposition:'outside',
-    hovertemplate:'<b>%{y}</b><br>%{x:.1f}%<extra></extra>',
-  }], {
-    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
-    font:{color:'#1a3a5c',size:8}, margin:{t:4,b:36,l:110,r:50},
-    xaxis:{gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c',zeroline:true,zerolinecolor:'#1a3a5c',zerolinewidth:1.5},
-    yaxis:{gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
-    showlegend:false,
-  }, {responsive:true, displayModeBar:false});
+  paper_bgcolor:'transparent',
+  plot_bgcolor:'transparent',
 
-  // Chart 3 — per-student Jan usage
-  const sorted3 = [...BUILDINGS].map(b => ({
-    name: b.name.replace(' Hall',''),
-    val: b.capacity > 0 ? (b[prefix + 'jan'] || 0) / b.capacity : 0,
-    isSelected: b.name === selectedDormName,
-  })).sort((a,b) => b.val - a.val);
+  font:{color:'#1a3a5c',size:12},
+  margin:{t:50,b:60,l:60,r:20},
 
-  Plotly.newPlot('chartPerStudent', [{
-    x: sorted3.map(b => b.name),
-    y: sorted3.map(b => b.val),
+  xaxis:{gridcolor:'rgba(0,0,0,0.08)',color:'#1a3a5c'},
+  yaxis:{title:unit,gridcolor:'rgba(0,0,0,0.08)',color:'#1a3a5c'},
+
+  showlegend:false,
+  hovermode:'closest',
+}, {responsive:true, displayModeBar:false});
+
+
+// Chart 2 — Dec→Jan change bar
+const sorted2 = BUILDINGS.map(b => {
+  const pv = b[prefix + 'dec'] || 0;
+  const cv = b[prefix + 'jan'] || 0;
+  const pct = pv > 0 ? ((cv - pv) / pv * 100) : 0;
+  return {...b, pct};
+}).sort((a,b) => a.pct - b.pct);
+
+Plotly.newPlot('chartChange', [{
+  x: sorted2.map(b => b.pct),
+  y: sorted2.map(b => b.name.replace(' Hall','')),
+  type:'bar',
+  orientation:'h',
+  marker:{
+    color: sorted2.map(b =>
+      b.name === selectedDormName
+        ? '#FF9800'
+        : (b.pct < 0 ? '#2e9e6b' : '#d94f4f')
+    )
+  },
+  text: sorted2.map(b => (b.pct>0?'+':'')+b.pct.toFixed(1)+'%'),
+  textposition:'outside',
+  hovertemplate:'<b>%{y}</b><br>%{x:.1f}%<extra></extra>',
+}], {
+  title: { text: 'Percent Change in Energy Usage (Dec → Jan)', font:{size:16} },
+
+  paper_bgcolor:'transparent',
+  plot_bgcolor:'transparent',
+
+  font:{color:'#1a3a5c',size:12},
+  margin:{t:50,b:60,l:120,r:60},
+
+  xaxis:{
+    gridcolor:'rgba(0,0,0,0.08)',
+    color:'#1a3a5c',
+    zeroline:true,
+    zerolinecolor:'#1a3a5c',
+    zerolinewidth:1.5
+  },
+  yaxis:{color:'#1a3a5c'},
+
+  showlegend:false,
+}, {responsive:true, displayModeBar:false});
+
+
+// Chart 3 — per-student Jan usage
+const sorted3 = [...BUILDINGS].map(b => ({
+  name: b.name.replace(' Hall',''),
+  val: b.capacity > 0 ? (b[prefix + 'jan'] || 0) / b.capacity : 0,
+  isSelected: b.name === selectedDormName,
+})).sort((a,b) => b.val - a.val);
+
+Plotly.newPlot('chartPerStudent', [{
+  x: sorted3.map(b => b.name),
+  y: sorted3.map(b => b.val),
+  type:'bar',
+  marker:{
+    color: sorted3.map(b =>
+      b.isSelected ? '#FF9800' : 'rgba(26,58,92,0.5)'
+    )
+  },
+  hovertemplate:'<b>%{x}</b><br>%{y:.2f} per student<extra></extra>',
+}], {
+  title: { text: 'Energy Usage per Student (January)', font:{size:16} },
+
+  paper_bgcolor:'transparent',
+  plot_bgcolor:'transparent',
+
+  font:{color:'#1a3a5c',size:12},
+  margin:{t:50,b:80,l:60,r:20},
+
+  xaxis:{tickangle:-40,color:'#1a3a5c'},
+  yaxis:{title:`${unit}/student`,gridcolor:'rgba(0,0,0,0.08)',color:'#1a3a5c'},
+
+  showlegend:false,
+}, {responsive:true, displayModeBar:false});
+
+
+// Chart 4 — monthly cost Dec vs Jan
+Plotly.newPlot('chartCost', [
+  {
+    x: BUILDINGS.map(b => b.name.replace(' Hall','')),
+    y: BUILDINGS.map(b => b[costPfx + 'dec'] || 0),
+    name:'Dec',
     type:'bar',
-    marker:{color: sorted3.map(b => b.isSelected ? '#FF9800' : 'rgba(26,58,92,0.5)')},
-    hovertemplate:'<b>%{x}</b><br>%{y:.2f} per student<extra></extra>',
-  }], {
-    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
-    font:{color:'#1a3a5c',size:8}, margin:{t:4,b:60,l:44,r:4},
-    xaxis:{tickangle:-40,color:'#1a3a5c'},
-    yaxis:{title:`${unit}/student`,gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
-    showlegend:false,
-  }, {responsive:true, displayModeBar:false});
+    marker:{color:'rgba(26,58,92,0.6)'},
+  },
+  {
+    x: BUILDINGS.map(b => b.name.replace(' Hall','')),
+    y: BUILDINGS.map(b => b[costPfx + 'jan'] || 0),
+    name:'Jan',
+    type:'bar',
+    marker:{color:'rgba(77,182,172,0.75)'},
+  }
+], {
+  title: { text: 'Monthly Utility Cost Comparison (Dec vs Jan)', font:{size:16} },
 
-  // Chart 4 — monthly cost Dec vs Jan
-  Plotly.newPlot('chartCost', [
-    {
-      x: BUILDINGS.map(b => b.name.replace(' Hall','')),
-      y: BUILDINGS.map(b => b[costPfx + 'dec'] || 0),
-      name:'Dec', type:'bar',
-      marker:{color:'rgba(26,58,92,0.6)'},
-    },
-    {
-      x: BUILDINGS.map(b => b.name.replace(' Hall','')),
-      y: BUILDINGS.map(b => b[costPfx + 'jan'] || 0),
-      name:'Jan', type:'bar',
-      marker:{color:'rgba(77,182,172,0.75)'},
-    }
-  ], {
-    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
-    font:{color:'#1a3a5c',size:8}, margin:{t:4,b:60,l:50,r:4},
-    barmode:'group',
-    xaxis:{tickangle:-40,color:'#1a3a5c'},
-    yaxis:{title:'$ / month',gridcolor:'rgba(0,0,0,0.06)',color:'#1a3a5c'},
-    showlegend:true, legend:{orientation:'h',x:0,y:1.08,font:{size:8}},
-  }, {responsive:true, displayModeBar:false});
-}
+  paper_bgcolor:'transparent',
+  plot_bgcolor:'transparent',
+
+  font:{color:'#1a3a5c',size:12},
+  margin:{t:50,b:80,l:60,r:20},
+
+  barmode:'group',
+
+  xaxis:{tickangle:-40,color:'#1a3a5c'},
+  yaxis:{title:'$ / month',gridcolor:'rgba(0,0,0,0.08)',color:'#1a3a5c'},
+
+  showlegend:true,
+  legend:{orientation:'h',x:0,y:1.1,font:{size:10}},
+}, {responsive:true, displayModeBar:false});
 
 // ── IMPACT ───────────────────────────────────────────────────────────
 function buildImpactActions() {
